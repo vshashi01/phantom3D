@@ -66,10 +66,16 @@ class _MyHomePageState extends State<MyHomePage> {
         title: Text("WebApp"),
         actions: [
           IconButton(
-            icon: Icon(Icons.web),
+            icon: Icon(Icons.web_asset_rounded),
             onPressed: () {
               renderingCubit?.connect();
             },
+          ),
+          IconButton(
+            icon: Icon(Icons.upload_file),
+            onPressed: renderingCubit?.isConnected() ? () {
+              
+            } : null,
           ),
           IconButton(
             icon: Icon(Icons.cancel),

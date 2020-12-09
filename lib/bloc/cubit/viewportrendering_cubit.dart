@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
@@ -7,6 +8,7 @@ import 'package:phantom3d/data_model/server_message_pack.dart';
 import 'package:phantom3d/data_model/viewport_commands.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:phantom3d/multi_platform_libs/websocket/websocket_channel.dart';
+import 'package:file_picker/file_picker.dart';
 
 part 'viewportrendering_state.dart';
 
@@ -16,6 +18,8 @@ class ViewportRenderingCubit extends Cubit<ViewportRenderingState> {
   WebSocketChannel _renderingSocket;
   StreamSubscription _renderStreamListener;
 
+  bool _isConnected = false;
+
   final connectHost = "ws://localhost:8000/webg3n?h=800&w=1000";
   bool connect({String url}) {
     try {
@@ -24,12 +28,13 @@ class ViewportRenderingCubit extends Cubit<ViewportRenderingState> {
       _renderStreamListener = _renderingSocket.stream.listen((message) {
         _processRenderStream(message);
       });
-
+      _isConnected = true;
       emit(ViewportRenderingConnected());
 
       return true;
     } catch (error) {
       print(error);
+      _isConnected = false;
       emit(ViewportRenderingDisconnected(null));
       return false;
     }
@@ -40,13 +45,30 @@ class ViewportRenderingCubit extends Cubit<ViewportRenderingState> {
       _renderingSocket = null;
       _renderStreamListener.cancel();
       _renderStreamListener = null;
-
+      _isConnected = false;
       emit(ViewportRenderingDisconnected(null));
       return true;
     } catch (error) {
       print(error);
+      _isConnected = false;
       emit(ViewportRenderingDisconnected(null));
       return false;
+    }
+  }
+
+  bool isConnected() {
+    return _isConnected;
+  }
+
+  Future<bool> uploadModel() async {
+    final filePickerResult = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['stl', 'gltf'],
+        allowMultiple: false);
+
+    if (filePickerResult != null) {
+      final file = File(filePickerResult.files.first.path);
+      print(filePickerResult.files.first.path);
     }
   }
 

@@ -25,6 +25,7 @@ dependencies:
   equatable: 1.2.5
   flutter_bloc: 6.1.1
   enum_to_string: 1.0.14
+  file_picker: 2.1.0
   flutter:
     sdk: flutter
 
