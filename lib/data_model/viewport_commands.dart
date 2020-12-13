@@ -112,3 +112,14 @@ class ViewportResizeCommands extends RenderingCommandMessage {
             ctrlPressed: false,
             moved: false);
 }
+
+class UnzoomAll extends RenderingCommandMessage {
+  UnzoomAll()
+      : super(
+            xPos: 0,
+            yPos: 0,
+            command: "ZoomExtent",
+            value: "",
+            ctrlPressed: false,
+            moved: false);
+}

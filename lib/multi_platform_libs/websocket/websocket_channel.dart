@@ -4,5 +4,9 @@ import 'package:phantom3d/multi_platform_libs/websocket/websocket_channel_stub.d
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 WebSocketChannel getConnection(String url) {
-  return webSocketChannelConnect(url);
+  try {
+    return webSocketChannelConnect(url);
+  } catch (error) {
+    rethrow;
+  }
 }
