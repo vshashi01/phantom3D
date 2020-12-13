@@ -26,6 +26,10 @@ dependencies:
   flutter_bloc: 6.1.1
   enum_to_string: 1.0.14
   file_picker: 2.1.0
+  filepicker_windows: 1.0.0
+  platform_info: 2.2.0
+  dio: 3.0.10
+  draggable_widget: 1.0.1
   flutter:
     sdk: flutter
 
