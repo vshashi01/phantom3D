@@ -114,6 +114,28 @@ class ViewportRenderingCubit extends Cubit<ViewportRenderingState> {
     _renderingSocket?.sink?.add(unzoomCommand.toString());
   }
 
+  void selectEntityFromCoordinate(int xPos, int yPos, bool multiSelection) {
+    final selectionCommand =
+        SelectEntityCoordinates(xPos, yPos, multiSelect: multiSelection);
+    _renderingSocket?.sink?.add(selectionCommand.toString());
+  }
+
+  void selectEntityFromName(String name, bool multiSelection) {
+    final selectionCommand =
+        SelectEntityFromName(name, multiSelect: multiSelection);
+    _renderingSocket?.sink?.add(selectionCommand.toString());
+  }
+
+  void hideEntityFromName(String name) {
+    final hideCommand = HideEntityFromName(name);
+    _renderingSocket?.sink?.add(hideCommand.toString());
+  }
+
+  void showEntityFromName(String name) {
+    final showCommand = UnhideEntityFromName(name);
+    _renderingSocket?.sink?.add(showCommand.toString());
+  }
+
   void _processRenderStream(message) {
     try {
       Map<String, dynamic> map = jsonDecode(message);
@@ -144,7 +166,7 @@ class ViewportRenderingCubit extends Cubit<ViewportRenderingState> {
   void _processMap(Map<String, dynamic> map) {
     final serverMessage = ServerMessagePack.fromMap(map);
     if (serverMessage != null) {
-      emit(ViewportReporting(serverMessage.toString()));
+      emit(ViewportReporting(serverMessage));
     }
   }
 }

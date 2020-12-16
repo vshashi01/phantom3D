@@ -1,6 +1,8 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:phantom3d/bloc/keyboard_listener/keyboard_listener_cubit.dart';
 
 class ViewportInteractionListener extends StatefulWidget {
   const ViewportInteractionListener({
@@ -109,120 +111,234 @@ class _ViewportInteractionListenerState
       onHover: (onHover) {
         //dont use this
       },
-      child: RawKeyboardListener(
-        autofocus: false,
-        focusNode: widget.focusNode,
-        onKey: (rawKeyEvent) {
+      child: BlocBuilder<KeyboardListenerCubit, RawKeyEvent>(
+        // autofocus: false,
+        // focusNode: widget.focusNode,
+        // onKey: (rawKeyEvent) {
+        //   if (rawKeyEvent is RawKeyDownEvent) {
+        //     _keyDownEvent = rawKeyEvent;
+        //   } else if (rawKeyEvent is RawKeyUpEvent) {
+        //     _keyDownEvent = null;
+        //   }
+        // },
+        builder: (context, rawKeyEvent) {
           if (rawKeyEvent is RawKeyDownEvent) {
             _keyDownEvent = rawKeyEvent;
           } else if (rawKeyEvent is RawKeyUpEvent) {
             _keyDownEvent = null;
           }
-        },
-        child: Listener(
-          child: widget.child ?? Container(),
-          onPointerDown: (onPointerDownEvent) {
-            if (_pointerInViewport) {
-              if (!widget.focusNode.hasFocus) {
-                FocusScope.of(context).requestFocus(widget.focusNode);
-              }
+          return Listener(
+            child: widget.child ?? Container(),
+            onPointerDown: (onPointerDownEvent) {
+              if (_pointerInViewport) {
+                if (!widget.focusNode.hasFocus) {
+                  FocusScope.of(context).requestFocus(widget.focusNode);
+                }
 
-              if (onPointerDownEvent.buttons == kPrimaryMouseButton) {
-                _primaryMouseButtonDownEvent(
-                    onPointerDownEvent.localPosition.dx.toInt(),
-                    onPointerDownEvent.localPosition.dy.toInt(),
-                    _keyDownEvent);
-              } else if (onPointerDownEvent.buttons == kSecondaryMouseButton) {
-                _secondaryMouseButtonDownEvent(
-                    onPointerDownEvent.localPosition.dx.toInt(),
-                    onPointerDownEvent.localPosition.dy.toInt(),
-                    _keyDownEvent);
-              } else {
-                _scrollerButtonDownEvent(
-                    onPointerDownEvent.localPosition.dx.toInt(),
-                    onPointerDownEvent.localPosition.dy.toInt(),
-                    _keyDownEvent);
-              }
-            }
-          },
-          onPointerUp: (onPointerUpEvent) {
-            if (_pointerInViewport) {
-              if (_previousButtonEvent == _ButtonEvents.buttonDown) {
-                // all callback related to button click
-                if (onPointerUpEvent.buttons == kPrimaryMouseButton) {
-                  _primaryMouseButtonUpEvent(
-                      onPointerUpEvent.localPosition.dx.toInt(),
-                      onPointerUpEvent.localPosition.dy.toInt(),
+                if (onPointerDownEvent.buttons == kPrimaryMouseButton) {
+                  _primaryMouseButtonDownEvent(
+                      onPointerDownEvent.localPosition.dx.toInt(),
+                      onPointerDownEvent.localPosition.dy.toInt(),
                       _keyDownEvent);
-                } else if (onPointerUpEvent.buttons == kSecondaryMouseButton) {
-                  _secondaryMouseButtonUpEvent(
-                      onPointerUpEvent.localPosition.dx.toInt(),
-                      onPointerUpEvent.localPosition.dy.toInt(),
-                      _keyDownEvent);
-                } else {
-                  _scrollerButtonUpEvent(
-                      onPointerUpEvent.localPosition.dx.toInt(),
-                      onPointerUpEvent.localPosition.dy.toInt(),
-                      _keyDownEvent);
-                }
-              } else if (_previousButtonEvent == _ButtonEvents.buttonDrag) {
-                // all callback related to finishing drag
-                if (onPointerUpEvent.buttons == kPrimaryMouseButton) {
-                  _primaryMouseButtonDragCompleteEvent(
-                      onPointerUpEvent.localPosition.dx.toInt(),
-                      onPointerUpEvent.localPosition.dy.toInt(),
-                      _keyDownEvent);
-                } else if (onPointerUpEvent.buttons == kSecondaryMouseButton) {
-                  _secondaryMouseButtonDragCompleteEvent(
-                      onPointerUpEvent.localPosition.dx.toInt(),
-                      onPointerUpEvent.localPosition.dy.toInt(),
-                      _keyDownEvent);
-                } else {
-                  _scrollerButtonDragCompleteEvent(
-                      onPointerUpEvent.localPosition.dx.toInt(),
-                      onPointerUpEvent.localPosition.dy.toInt(),
-                      _keyDownEvent);
-                }
-              }
-            }
-          },
-          onPointerMove: (onPointerMoveEvent) {
-            if (_pointerInViewport) {
-              if (_previousButtonEvent == _ButtonEvents.buttonDown ||
-                  _previousButtonEvent == _ButtonEvents.buttonDrag) {
-                // all callback related to drags
-                if (onPointerMoveEvent.buttons == kPrimaryMouseButton) {
-                  _primaryMouseButtonDragEvent(
-                      onPointerMoveEvent.localPosition.dx.toInt(),
-                      onPointerMoveEvent.localPosition.dy.toInt(),
-                      _keyDownEvent);
-                } else if (onPointerMoveEvent.buttons ==
+                } else if (onPointerDownEvent.buttons ==
                     kSecondaryMouseButton) {
-                  _secondaryMouseButtonDragEvent(
-                      onPointerMoveEvent.localPosition.dx.toInt(),
-                      onPointerMoveEvent.localPosition.dy.toInt(),
+                  _secondaryMouseButtonDownEvent(
+                      onPointerDownEvent.localPosition.dx.toInt(),
+                      onPointerDownEvent.localPosition.dy.toInt(),
                       _keyDownEvent);
                 } else {
-                  _scrollerButtonDragEvent(
-                      onPointerMoveEvent.localPosition.dx.toInt(),
-                      onPointerMoveEvent.localPosition.dy.toInt(),
+                  _scrollerButtonDownEvent(
+                      onPointerDownEvent.localPosition.dx.toInt(),
+                      onPointerDownEvent.localPosition.dy.toInt(),
                       _keyDownEvent);
                 }
               }
-            }
-          },
-          onPointerHover: (onPointerHover) {
-            //not needed
-          },
-          onPointerSignal: (onPointerSignalEvent) {
-            if (onPointerSignalEvent is PointerScrollEvent) {
-              _scrollerButtonScrollEvent(
-                  onPointerSignalEvent.scrollDelta.dx.toInt(),
-                  onPointerSignalEvent.scrollDelta.dy.toInt(),
-                  _keyDownEvent);
-            }
-          },
-        ),
+            },
+            onPointerUp: (onPointerUpEvent) {
+              if (_pointerInViewport) {
+                if (_previousButtonEvent == _ButtonEvents.buttonDown) {
+                  // all callback related to button click
+                  if (onPointerUpEvent.buttons == kPrimaryMouseButton) {
+                    _primaryMouseButtonUpEvent(
+                        onPointerUpEvent.localPosition.dx.toInt(),
+                        onPointerUpEvent.localPosition.dy.toInt(),
+                        _keyDownEvent);
+                  } else if (onPointerUpEvent.buttons ==
+                      kSecondaryMouseButton) {
+                    _secondaryMouseButtonUpEvent(
+                        onPointerUpEvent.localPosition.dx.toInt(),
+                        onPointerUpEvent.localPosition.dy.toInt(),
+                        _keyDownEvent);
+                  } else {
+                    _scrollerButtonUpEvent(
+                        onPointerUpEvent.localPosition.dx.toInt(),
+                        onPointerUpEvent.localPosition.dy.toInt(),
+                        _keyDownEvent);
+                  }
+                } else if (_previousButtonEvent == _ButtonEvents.buttonDrag) {
+                  // all callback related to finishing drag
+                  if (onPointerUpEvent.buttons == kPrimaryMouseButton) {
+                    _primaryMouseButtonDragCompleteEvent(
+                        onPointerUpEvent.localPosition.dx.toInt(),
+                        onPointerUpEvent.localPosition.dy.toInt(),
+                        _keyDownEvent);
+                  } else if (onPointerUpEvent.buttons ==
+                      kSecondaryMouseButton) {
+                    _secondaryMouseButtonDragCompleteEvent(
+                        onPointerUpEvent.localPosition.dx.toInt(),
+                        onPointerUpEvent.localPosition.dy.toInt(),
+                        _keyDownEvent);
+                  } else {
+                    _scrollerButtonDragCompleteEvent(
+                        onPointerUpEvent.localPosition.dx.toInt(),
+                        onPointerUpEvent.localPosition.dy.toInt(),
+                        _keyDownEvent);
+                  }
+                }
+              }
+            },
+            onPointerMove: (onPointerMoveEvent) {
+              if (_pointerInViewport) {
+                if (_previousButtonEvent == _ButtonEvents.buttonDown ||
+                    _previousButtonEvent == _ButtonEvents.buttonDrag) {
+                  // all callback related to drags
+                  if (onPointerMoveEvent.buttons == kPrimaryMouseButton) {
+                    _primaryMouseButtonDragEvent(
+                        onPointerMoveEvent.localPosition.dx.toInt(),
+                        onPointerMoveEvent.localPosition.dy.toInt(),
+                        _keyDownEvent);
+                  } else if (onPointerMoveEvent.buttons ==
+                      kSecondaryMouseButton) {
+                    _secondaryMouseButtonDragEvent(
+                        onPointerMoveEvent.localPosition.dx.toInt(),
+                        onPointerMoveEvent.localPosition.dy.toInt(),
+                        _keyDownEvent);
+                  } else {
+                    _scrollerButtonDragEvent(
+                        onPointerMoveEvent.localPosition.dx.toInt(),
+                        onPointerMoveEvent.localPosition.dy.toInt(),
+                        _keyDownEvent);
+                  }
+                }
+              }
+            },
+            onPointerHover: (onPointerHover) {
+              //not needed
+            },
+            onPointerSignal: (onPointerSignalEvent) {
+              if (onPointerSignalEvent is PointerScrollEvent) {
+                _scrollerButtonScrollEvent(
+                    onPointerSignalEvent.scrollDelta.dx.toInt(),
+                    onPointerSignalEvent.scrollDelta.dy.toInt(),
+                    _keyDownEvent);
+              }
+            },
+          );
+        },
+        // child: Listener(
+        //   child: widget.child ?? Container(),
+        //   onPointerDown: (onPointerDownEvent) {
+        //     if (_pointerInViewport) {
+        //       if (!widget.focusNode.hasFocus) {
+        //         FocusScope.of(context).requestFocus(widget.focusNode);
+        //       }
+
+        //       if (onPointerDownEvent.buttons == kPrimaryMouseButton) {
+        //         _primaryMouseButtonDownEvent(
+        //             onPointerDownEvent.localPosition.dx.toInt(),
+        //             onPointerDownEvent.localPosition.dy.toInt(),
+        //             _keyDownEvent);
+        //       } else if (onPointerDownEvent.buttons == kSecondaryMouseButton) {
+        //         _secondaryMouseButtonDownEvent(
+        //             onPointerDownEvent.localPosition.dx.toInt(),
+        //             onPointerDownEvent.localPosition.dy.toInt(),
+        //             _keyDownEvent);
+        //       } else {
+        //         _scrollerButtonDownEvent(
+        //             onPointerDownEvent.localPosition.dx.toInt(),
+        //             onPointerDownEvent.localPosition.dy.toInt(),
+        //             _keyDownEvent);
+        //       }
+        //     }
+        //   },
+        //   onPointerUp: (onPointerUpEvent) {
+        //     if (_pointerInViewport) {
+        //       if (_previousButtonEvent == _ButtonEvents.buttonDown) {
+        //         // all callback related to button click
+        //         if (onPointerUpEvent.buttons == kPrimaryMouseButton) {
+        //           _primaryMouseButtonUpEvent(
+        //               onPointerUpEvent.localPosition.dx.toInt(),
+        //               onPointerUpEvent.localPosition.dy.toInt(),
+        //               _keyDownEvent);
+        //         } else if (onPointerUpEvent.buttons == kSecondaryMouseButton) {
+        //           _secondaryMouseButtonUpEvent(
+        //               onPointerUpEvent.localPosition.dx.toInt(),
+        //               onPointerUpEvent.localPosition.dy.toInt(),
+        //               _keyDownEvent);
+        //         } else {
+        //           _scrollerButtonUpEvent(
+        //               onPointerUpEvent.localPosition.dx.toInt(),
+        //               onPointerUpEvent.localPosition.dy.toInt(),
+        //               _keyDownEvent);
+        //         }
+        //       } else if (_previousButtonEvent == _ButtonEvents.buttonDrag) {
+        //         // all callback related to finishing drag
+        //         if (onPointerUpEvent.buttons == kPrimaryMouseButton) {
+        //           _primaryMouseButtonDragCompleteEvent(
+        //               onPointerUpEvent.localPosition.dx.toInt(),
+        //               onPointerUpEvent.localPosition.dy.toInt(),
+        //               _keyDownEvent);
+        //         } else if (onPointerUpEvent.buttons == kSecondaryMouseButton) {
+        //           _secondaryMouseButtonDragCompleteEvent(
+        //               onPointerUpEvent.localPosition.dx.toInt(),
+        //               onPointerUpEvent.localPosition.dy.toInt(),
+        //               _keyDownEvent);
+        //         } else {
+        //           _scrollerButtonDragCompleteEvent(
+        //               onPointerUpEvent.localPosition.dx.toInt(),
+        //               onPointerUpEvent.localPosition.dy.toInt(),
+        //               _keyDownEvent);
+        //         }
+        //       }
+        //     }
+        //   },
+        //   onPointerMove: (onPointerMoveEvent) {
+        //     if (_pointerInViewport) {
+        //       if (_previousButtonEvent == _ButtonEvents.buttonDown ||
+        //           _previousButtonEvent == _ButtonEvents.buttonDrag) {
+        //         // all callback related to drags
+        //         if (onPointerMoveEvent.buttons == kPrimaryMouseButton) {
+        //           _primaryMouseButtonDragEvent(
+        //               onPointerMoveEvent.localPosition.dx.toInt(),
+        //               onPointerMoveEvent.localPosition.dy.toInt(),
+        //               _keyDownEvent);
+        //         } else if (onPointerMoveEvent.buttons ==
+        //             kSecondaryMouseButton) {
+        //           _secondaryMouseButtonDragEvent(
+        //               onPointerMoveEvent.localPosition.dx.toInt(),
+        //               onPointerMoveEvent.localPosition.dy.toInt(),
+        //               _keyDownEvent);
+        //         } else {
+        //           _scrollerButtonDragEvent(
+        //               onPointerMoveEvent.localPosition.dx.toInt(),
+        //               onPointerMoveEvent.localPosition.dy.toInt(),
+        //               _keyDownEvent);
+        //         }
+        //       }
+        //     }
+        //   },
+        //   onPointerHover: (onPointerHover) {
+        //     //not needed
+        //   },
+        //   onPointerSignal: (onPointerSignalEvent) {
+        //     if (onPointerSignalEvent is PointerScrollEvent) {
+        //       _scrollerButtonScrollEvent(
+        //           onPointerSignalEvent.scrollDelta.dx.toInt(),
+        //           onPointerSignalEvent.scrollDelta.dy.toInt(),
+        //           _keyDownEvent);
+        //     }
+        //   },
+        // ),
       ),
     );
   }
