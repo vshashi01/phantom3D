@@ -78,49 +78,25 @@ enum _ButtonEvents {
 
 class _ViewportInteractionListenerState
     extends State<ViewportInteractionListener> {
-  bool _deviceWithMouse = true;
   bool _pointerInViewport;
 
-  bool _primaryButtonDown;
-  bool _secondaryButtonDown;
-  bool _scrollerButtonDown;
-
-  bool _primaryButtonDrag;
-  bool _secondaryButtonDrag;
-
-  RawKeyDownEvent _keyDownEvent = null;
-
+  RawKeyDownEvent _keyDownEvent;
   _ButtonEvents _previousButtonEvent = _ButtonEvents.buttonReset;
-  _ButtonEvents _currentButtonEvent = _ButtonEvents.buttonReset;
-
-  Offset _previousScrollerOffset;
-  Offset _currentScrollerOffset;
 
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
       onEnter: (onEnter) {
         _pointerInViewport = true;
-        //window.document.onContextMenu.listen((evt) => evt.preventDefault());
       },
       onExit: (onExit) {
         _pointerInViewport = false;
         _previousButtonEvent = _ButtonEvents.buttonReset;
-        _currentButtonEvent = _ButtonEvents.buttonReset;
       },
       onHover: (onHover) {
         //dont use this
       },
       child: BlocBuilder<KeyboardListenerCubit, RawKeyEvent>(
-        // autofocus: false,
-        // focusNode: widget.focusNode,
-        // onKey: (rawKeyEvent) {
-        //   if (rawKeyEvent is RawKeyDownEvent) {
-        //     _keyDownEvent = rawKeyEvent;
-        //   } else if (rawKeyEvent is RawKeyUpEvent) {
-        //     _keyDownEvent = null;
-        //   }
-        // },
         builder: (context, rawKeyEvent) {
           if (rawKeyEvent is RawKeyDownEvent) {
             _keyDownEvent = rawKeyEvent;
@@ -235,110 +211,6 @@ class _ViewportInteractionListenerState
             },
           );
         },
-        // child: Listener(
-        //   child: widget.child ?? Container(),
-        //   onPointerDown: (onPointerDownEvent) {
-        //     if (_pointerInViewport) {
-        //       if (!widget.focusNode.hasFocus) {
-        //         FocusScope.of(context).requestFocus(widget.focusNode);
-        //       }
-
-        //       if (onPointerDownEvent.buttons == kPrimaryMouseButton) {
-        //         _primaryMouseButtonDownEvent(
-        //             onPointerDownEvent.localPosition.dx.toInt(),
-        //             onPointerDownEvent.localPosition.dy.toInt(),
-        //             _keyDownEvent);
-        //       } else if (onPointerDownEvent.buttons == kSecondaryMouseButton) {
-        //         _secondaryMouseButtonDownEvent(
-        //             onPointerDownEvent.localPosition.dx.toInt(),
-        //             onPointerDownEvent.localPosition.dy.toInt(),
-        //             _keyDownEvent);
-        //       } else {
-        //         _scrollerButtonDownEvent(
-        //             onPointerDownEvent.localPosition.dx.toInt(),
-        //             onPointerDownEvent.localPosition.dy.toInt(),
-        //             _keyDownEvent);
-        //       }
-        //     }
-        //   },
-        //   onPointerUp: (onPointerUpEvent) {
-        //     if (_pointerInViewport) {
-        //       if (_previousButtonEvent == _ButtonEvents.buttonDown) {
-        //         // all callback related to button click
-        //         if (onPointerUpEvent.buttons == kPrimaryMouseButton) {
-        //           _primaryMouseButtonUpEvent(
-        //               onPointerUpEvent.localPosition.dx.toInt(),
-        //               onPointerUpEvent.localPosition.dy.toInt(),
-        //               _keyDownEvent);
-        //         } else if (onPointerUpEvent.buttons == kSecondaryMouseButton) {
-        //           _secondaryMouseButtonUpEvent(
-        //               onPointerUpEvent.localPosition.dx.toInt(),
-        //               onPointerUpEvent.localPosition.dy.toInt(),
-        //               _keyDownEvent);
-        //         } else {
-        //           _scrollerButtonUpEvent(
-        //               onPointerUpEvent.localPosition.dx.toInt(),
-        //               onPointerUpEvent.localPosition.dy.toInt(),
-        //               _keyDownEvent);
-        //         }
-        //       } else if (_previousButtonEvent == _ButtonEvents.buttonDrag) {
-        //         // all callback related to finishing drag
-        //         if (onPointerUpEvent.buttons == kPrimaryMouseButton) {
-        //           _primaryMouseButtonDragCompleteEvent(
-        //               onPointerUpEvent.localPosition.dx.toInt(),
-        //               onPointerUpEvent.localPosition.dy.toInt(),
-        //               _keyDownEvent);
-        //         } else if (onPointerUpEvent.buttons == kSecondaryMouseButton) {
-        //           _secondaryMouseButtonDragCompleteEvent(
-        //               onPointerUpEvent.localPosition.dx.toInt(),
-        //               onPointerUpEvent.localPosition.dy.toInt(),
-        //               _keyDownEvent);
-        //         } else {
-        //           _scrollerButtonDragCompleteEvent(
-        //               onPointerUpEvent.localPosition.dx.toInt(),
-        //               onPointerUpEvent.localPosition.dy.toInt(),
-        //               _keyDownEvent);
-        //         }
-        //       }
-        //     }
-        //   },
-        //   onPointerMove: (onPointerMoveEvent) {
-        //     if (_pointerInViewport) {
-        //       if (_previousButtonEvent == _ButtonEvents.buttonDown ||
-        //           _previousButtonEvent == _ButtonEvents.buttonDrag) {
-        //         // all callback related to drags
-        //         if (onPointerMoveEvent.buttons == kPrimaryMouseButton) {
-        //           _primaryMouseButtonDragEvent(
-        //               onPointerMoveEvent.localPosition.dx.toInt(),
-        //               onPointerMoveEvent.localPosition.dy.toInt(),
-        //               _keyDownEvent);
-        //         } else if (onPointerMoveEvent.buttons ==
-        //             kSecondaryMouseButton) {
-        //           _secondaryMouseButtonDragEvent(
-        //               onPointerMoveEvent.localPosition.dx.toInt(),
-        //               onPointerMoveEvent.localPosition.dy.toInt(),
-        //               _keyDownEvent);
-        //         } else {
-        //           _scrollerButtonDragEvent(
-        //               onPointerMoveEvent.localPosition.dx.toInt(),
-        //               onPointerMoveEvent.localPosition.dy.toInt(),
-        //               _keyDownEvent);
-        //         }
-        //       }
-        //     }
-        //   },
-        //   onPointerHover: (onPointerHover) {
-        //     //not needed
-        //   },
-        //   onPointerSignal: (onPointerSignalEvent) {
-        //     if (onPointerSignalEvent is PointerScrollEvent) {
-        //       _scrollerButtonScrollEvent(
-        //           onPointerSignalEvent.scrollDelta.dx.toInt(),
-        //           onPointerSignalEvent.scrollDelta.dy.toInt(),
-        //           _keyDownEvent);
-        //     }
-        //   },
-        // ),
       ),
     );
   }
