@@ -30,6 +30,7 @@ dependencies:
   platform_info: 2.2.0
   dio: 3.0.10
   draggable_widget: 1.0.1
+  flutter_simple_treeview: 2.0.2
   flutter:
     sdk: flutter
 

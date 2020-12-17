@@ -34,5 +34,8 @@ class ViewportLoading extends ViewportRenderingState {
 }
 
 class ViewportReporting extends ViewportRenderingState {
-  ViewportReporting(String message) : super(true, null, message);
+  ViewportReporting(this.messagePack)
+      : super(true, null, messagePack.toString());
+
+  final ServerMessagePack messagePack;
 }

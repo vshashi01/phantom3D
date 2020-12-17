@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:phantom3d/bloc/keyboard_listener/keyboard_listener_cubit.dart';
+import 'package:phantom3d/bloc/object_list/object_list_cubit.dart';
 import 'package:phantom3d/bloc/upload_model/uploadmodel_cubit.dart';
 import 'package:phantom3d/bloc/viewport_rendering/viewportrendering_cubit.dart';
 import 'package:phantom3d/widgets/conditional_builder_widget.dart';
 import 'package:phantom3d/widgets/file_upload_dialog.dart';
+import 'package:phantom3d/widgets/object_list_dialog.dart';
 import 'package:phantom3d/widgets/viewport_listener_widget.dart';
 
 void main() async {
@@ -36,8 +39,10 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  final keyboardListener = KeyboardListenerCubit();
   final renderingCubit = ViewportRenderingCubit();
   final uploadModelCubit = UploadmodelCubit();
+  var objectlistCubit;
   //final DragController _dragController = DragController();
   FocusNode _focusNode;
 
@@ -48,80 +53,90 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   void initState() {
-    //renderingCubit?.connect();
+    objectlistCubit = ObjectlistCubit(
+        uploadmodelCubit: uploadModelCubit, renderingCubit: renderingCubit);
     _focusNode = FocusNode(canRequestFocus: true);
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        shadowColor: Colors.white,
-        title: Text("Phantom 3D"),
-        actions: [
-          //_buildUploaderButton(),
-          _buildConnectButton(),
-          _buildDisconnectButton(),
-        ],
-      ),
-      body: Container(
-        child: LayoutBuilder(
-          builder: (BuildContext context, BoxConstraints constraints) {
-            if (_previousMaxHeight != constraints.maxHeight ||
-                _previousMaxWidth != constraints.maxWidth) {
-              renderingCubit?.setWindowSize(
-                  constraints.maxWidth.toInt(), constraints.maxHeight.toInt());
+    return RawKeyboardListener(
+        onKey: (rawKeyEvent) {
+          keyboardListener.add(rawKeyEvent);
+        },
+        focusNode: _focusNode,
+        child: BlocProvider.value(
+          value: keyboardListener,
+          child: Scaffold(
+            appBar: AppBar(
+              backgroundColor: Colors.black,
+              shadowColor: Colors.white,
+              title: Text("Phantom 3D"),
+              actions: [
+                //_buildUploaderButton(),
+                _buildConnectButton(),
+                _buildDisconnectButton(),
+              ],
+            ),
+            body: Container(
+              child: LayoutBuilder(
+                builder: (BuildContext context, BoxConstraints constraints) {
+                  if (_previousMaxHeight != constraints.maxHeight ||
+                      _previousMaxWidth != constraints.maxWidth) {
+                    renderingCubit?.setWindowSize(constraints.maxWidth.toInt(),
+                        constraints.maxHeight.toInt());
 
-              _previousMaxWidth = constraints.maxWidth;
-              _previousMaxHeight = constraints.maxHeight;
-            }
+                    _previousMaxWidth = constraints.maxWidth;
+                    _previousMaxHeight = constraints.maxHeight;
+                  }
 
-            return Container(
-              width: constraints.maxWidth,
-              height: constraints.maxHeight,
-              color: Colors.black,
-              child: Stack(
-                children: [
-                  Container(
-                    child: BlocBuilder<ViewportRenderingCubit,
-                        ViewportRenderingState>(
-                      cubit: renderingCubit,
-                      buildWhen: (previousState, currentState) {
-                        if (previousState == currentState) {
-                          return false;
-                        } else if (currentState.runtimeType ==
-                            ViewportReporting) {
-                          return false;
-                        }
-                        return true;
-                      },
-                      builder: (context, state) {
-                        if (state is ViewportRenderingUpdate) {
-                          return Stack(children: [
-                            buildViewport(state, constraints),
-                          ]);
-                        } else {
-                          return Container(
-                            alignment: Alignment.center,
-                            height: constraints.maxHeight / 3,
-                            width: constraints.maxWidth / 3,
-                            child: CircularProgressIndicator(),
-                          );
-                        }
-                      },
+                  return Container(
+                    width: constraints.maxWidth,
+                    height: constraints.maxHeight,
+                    color: Colors.black,
+                    child: Stack(
+                      children: [
+                        Container(
+                          child: BlocBuilder<ViewportRenderingCubit,
+                              ViewportRenderingState>(
+                            cubit: renderingCubit,
+                            buildWhen: (previousState, currentState) {
+                              if (previousState == currentState) {
+                                return false;
+                              } else if (currentState.runtimeType ==
+                                  ViewportReporting) {
+                                return false;
+                              }
+                              return true;
+                            },
+                            builder: (context, state) {
+                              if (state is ViewportRenderingUpdate) {
+                                return Stack(children: [
+                                  buildViewport(state, constraints),
+                                ]);
+                              } else {
+                                return Container(
+                                  alignment: Alignment.center,
+                                  height: constraints.maxHeight / 3,
+                                  width: constraints.maxWidth / 3,
+                                  child: CircularProgressIndicator(),
+                                );
+                              }
+                            },
+                          ),
+                        ),
+                        _buildUnzoomAllButton(),
+                        _buildUploaderWindow(),
+                        _buildObjectListWindow(),
+                      ],
                     ),
-                  ),
-                  _buildUnzoomAllButton(),
-                  _buildUploaderWindow()
-                ],
+                  );
+                },
               ),
-            );
-          },
-        ),
-      ),
-    );
+            ),
+          ),
+        ));
   }
 
   Container buildViewport(
@@ -136,6 +151,9 @@ class _MyHomePageState extends State<MyHomePage> {
           if (keyEvent != null &&
               keyEvent.logicalKey == LogicalKeyboardKey.keyP) {
             renderingCubit?.startPanAction(xPos, yPos);
+          } else {
+            renderingCubit?.selectEntityFromCoordinate(
+                xPos, yPos, (keyEvent != null && keyEvent.isControlPressed));
           }
         },
         onPrimaryMouseButtonDrag: (xPos, yPos, keyEvent) {
@@ -238,6 +256,18 @@ class _MyHomePageState extends State<MyHomePage> {
         width: 200,
         height: 180,
         uploadmodelCubit: uploadModelCubit,
+      ),
+    );
+  }
+
+  Widget _buildObjectListWindow() {
+    return ConditionalBuilder(
+      conditionalStream: renderingCubit.connectionStream,
+      child: ObjectListDialog(
+        width: 300,
+        maxHeight: 500,
+        objectlistCubit: objectlistCubit,
+        renderingCubit: renderingCubit,
       ),
     );
   }

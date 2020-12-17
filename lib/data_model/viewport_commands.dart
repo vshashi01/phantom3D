@@ -123,3 +123,47 @@ class UnzoomAll extends RenderingCommandMessage {
             ctrlPressed: false,
             moved: false);
 }
+
+class SelectEntityCoordinates extends RenderingCommandMessage {
+  SelectEntityCoordinates(int xPos, int yPos, {bool multiSelect = false})
+      : super(
+            xPos: xPos,
+            yPos: yPos,
+            command: "SelectEntityCoordinates",
+            value: "",
+            ctrlPressed: multiSelect,
+            moved: false);
+}
+
+class SelectEntityFromName extends RenderingCommandMessage {
+  SelectEntityFromName(String name, {bool multiSelect = false})
+      : super(
+            xPos: 0,
+            yPos: 0,
+            command: "SelectEntityFromName",
+            value: name,
+            ctrlPressed: multiSelect,
+            moved: false);
+}
+
+class HideEntityFromName extends RenderingCommandMessage {
+  HideEntityFromName(String name)
+      : super(
+            xPos: 0,
+            yPos: 0,
+            command: "HideEntityFromName",
+            value: name,
+            ctrlPressed: false,
+            moved: false);
+}
+
+class UnhideEntityFromName extends RenderingCommandMessage {
+  UnhideEntityFromName(String name)
+      : super(
+            xPos: 0,
+            yPos: 0,
+            command: "UnhideEntityFromName",
+            value: name,
+            ctrlPressed: false,
+            moved: false);
+}
