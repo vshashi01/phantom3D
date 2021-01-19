@@ -47,11 +47,12 @@ class ViewportRenderingCubit extends Cubit<ViewportRenderingState> {
       _renderingSocket.sink.add(GetUUID().toString());
 
       _renderStreamListener = _renderingSocket.stream.listen((message) {
-        _processRenderStream(message);
+        _processMessageStream(message);
       }, onDone: () {
         emit(ViewportReporting(
             ServerMessagePack(action: 'Websocket Closed', value: 'For fun'),
             _uuid));
+        emit(ViewportRenderingDisconnected(null));
       });
     } catch (error) {
       print(error);
@@ -148,30 +149,13 @@ class ViewportRenderingCubit extends Cubit<ViewportRenderingState> {
     _renderingSocket?.sink?.add(showCommand.toString());
   }
 
-  void _processRenderStream(message) {
+  void _processMessageStream(message) {
     try {
       Map<String, dynamic> map = jsonDecode(message);
       print(message);
 
       if (map.containsKey('action') && map.containsKey('value')) {
         _processPhantomG3nMessage(map);
-      }
-    } on FormatException {
-      _processImageBytes(message);
-    } catch (error) {
-      print(error);
-    }
-  }
-
-  void _processImageBytes(String base64String) {
-    try {
-      final imageBytes = base64Decode(base64String);
-
-      if (imageBytes != null && imageBytes.isNotEmpty) {
-        // emit(ViewportRenderingConnected(uuid, null, imageBytes: imageBytes));
-        // if (!_isConnected) {
-        //   _updateConnectionState(true);
-        // }
       }
     } catch (error) {
       print(error);
@@ -186,6 +170,7 @@ class ViewportRenderingCubit extends Cubit<ViewportRenderingState> {
         case "GetUUID":
           _uuid = serverMessage.value;
           emit(ViewportRenderingConnected(_uuid));
+          connectRenderStream();
           break;
       }
 

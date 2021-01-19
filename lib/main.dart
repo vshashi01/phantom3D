@@ -76,7 +76,6 @@ class _MyHomePageState extends State<MyHomePage> {
               shadowColor: Colors.white,
               title: Text("Phantom 3D"),
               actions: [
-                //_buildUploaderButton(),
                 _buildConnectButton(),
                 _buildShowWebRTCButton(),
                 _buildDisconnectButton(),
@@ -87,8 +86,8 @@ class _MyHomePageState extends State<MyHomePage> {
                 builder: (BuildContext context, BoxConstraints constraints) {
                   if (_previousMaxHeight != constraints.maxHeight ||
                       _previousMaxWidth != constraints.maxWidth) {
-                    renderingCubit?.setWindowSize(constraints.maxWidth.toInt(),
-                        constraints.maxHeight.toInt());
+                    // renderingCubit?.setWindowSize(constraints.maxWidth.toInt(),
+                    //     constraints.maxHeight.toInt());
 
                     _previousMaxWidth = constraints.maxWidth;
                     _previousMaxHeight = constraints.maxHeight;
@@ -120,27 +119,13 @@ class _MyHomePageState extends State<MyHomePage> {
                                 return Stack(children: [
                                   buildViewport(state),
                                 ]);
-                              } else if (state is ViewportRenderingConnected) {
-                                return Container(
-                                  child: Center(
-                                    child: ElevatedButton(
-                                      child: Text("Connect to Video"),
-                                      onPressed: () async {
-                                        await renderingCubit
-                                            ?.connectRenderStream();
-                                      },
-                                    ),
-                                  ),
-                                );
-                              } else {
-                                uploadModelCubit.uuid = "";
-                                return Container(
-                                  alignment: Alignment.center,
-                                  height: constraints.maxHeight / 3,
-                                  width: constraints.maxWidth / 3,
-                                  child: CircularProgressIndicator(),
-                                );
                               }
+                              uploadModelCubit.uuid = "";
+                              return Container(
+                                alignment: Alignment.center,
+                                child:
+                                    Center(child: CircularProgressIndicator()),
+                              );
                             },
                           ),
                         ),
