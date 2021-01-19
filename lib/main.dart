@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:phantom3d/bloc/keyboard_listener/keyboard_listener_cubit.dart';
 import 'package:phantom3d/bloc/object_list/object_list_cubit.dart';
 import 'package:phantom3d/bloc/upload_model/uploadmodel_cubit.dart';
@@ -8,6 +9,7 @@ import 'package:phantom3d/bloc/viewport_rendering/viewportrendering_cubit.dart';
 import 'package:phantom3d/widgets/conditional_builder_widget.dart';
 import 'package:phantom3d/widgets/file_upload_dialog.dart';
 import 'package:phantom3d/widgets/object_list_dialog.dart';
+import 'package:phantom3d/widgets/viewport_display_widget.dart';
 import 'package:phantom3d/widgets/viewport_listener_widget.dart';
 
 void main() async {
@@ -42,14 +44,14 @@ class _MyHomePageState extends State<MyHomePage> {
   final keyboardListener = KeyboardListenerCubit();
   final renderingCubit = ViewportRenderingCubit();
   final uploadModelCubit = UploadmodelCubit();
+  bool showRTCViewport = false;
+
   var objectlistCubit;
   //final DragController _dragController = DragController();
   FocusNode _focusNode;
 
   double _previousMaxWidth;
   double _previousMaxHeight;
-
-  bool _showDragController = false;
 
   @override
   void initState() {
@@ -76,6 +78,7 @@ class _MyHomePageState extends State<MyHomePage> {
               actions: [
                 //_buildUploaderButton(),
                 _buildConnectButton(),
+                _buildShowWebRTCButton(),
                 _buildDisconnectButton(),
               ],
             ),
@@ -111,11 +114,26 @@ class _MyHomePageState extends State<MyHomePage> {
                               return true;
                             },
                             builder: (context, state) {
-                              if (state is ViewportRenderingUpdate) {
+                              if (state is ViewportRenderingStreamingStarted) {
+                                //these cubits should ideally listen to each other. Gonna be an idiot and pass it in the UI for now.
+                                uploadModelCubit.uuid = state.uuid;
                                 return Stack(children: [
-                                  buildViewport(state, constraints),
+                                  buildViewport(state),
                                 ]);
+                              } else if (state is ViewportRenderingConnected) {
+                                return Container(
+                                  child: Center(
+                                    child: ElevatedButton(
+                                      child: Text("Connect to Video"),
+                                      onPressed: () async {
+                                        await renderingCubit
+                                            ?.connectRenderStream();
+                                      },
+                                    ),
+                                  ),
+                                );
                               } else {
+                                uploadModelCubit.uuid = "";
                                 return Container(
                                   alignment: Alignment.center,
                                   height: constraints.maxHeight / 3,
@@ -129,6 +147,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         _buildUnzoomAllButton(),
                         _buildUploaderWindow(),
                         _buildObjectListWindow(),
+                        _buildRTCVideoRender(),
                       ],
                     ),
                   );
@@ -139,12 +158,10 @@ class _MyHomePageState extends State<MyHomePage> {
         ));
   }
 
-  Container buildViewport(
-      ViewportRenderingUpdate state, BoxConstraints constraints) {
+  Container buildViewport(ViewportRenderingStreamingStarted state) {
     return Container(
       child: ViewportInteractionListener(
-        child: Image.memory(state.imageBytes,
-            scale: 1.0, width: constraints.maxWidth, fit: BoxFit.fill),
+        child: RTCVideoView(state.videoRenderer),
         focusNode: _focusNode,
         //pan if P key is pressed
         onPrimaryMouseButtonDown: (xPos, yPos, keyEvent) {
@@ -220,6 +237,22 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
+  Widget _buildShowWebRTCButton() {
+    return ConditionalBuilder(
+      conditionalStream: renderingCubit.connectionStream,
+      transformBool: false,
+      child: IconButton(
+        tooltip: "Show WEBRTC stream instead",
+        icon: Icon(Icons.collections_bookmark),
+        onPressed: () {
+          showRTCViewport = true;
+
+          setState(() {});
+        },
+      ),
+    );
+  }
+
   Widget _buildConnectButton() {
     return ConditionalBuilder(
       conditionalStream: renderingCubit.connectionStream,
@@ -229,21 +262,6 @@ class _MyHomePageState extends State<MyHomePage> {
         icon: Icon(Icons.web_asset_rounded),
         onPressed: () {
           renderingCubit?.connect();
-        },
-      ),
-    );
-  }
-
-  Widget _buildUploaderButton() {
-    return ConditionalBuilder(
-      conditionalStream: renderingCubit.connectionStream,
-      child: IconButton(
-        tooltip: "Load Model",
-        icon: Icon(Icons.upload_file),
-        onPressed: () {
-          _showDragController = !_showDragController;
-
-          setState(() {});
         },
       ),
     );
@@ -269,6 +287,22 @@ class _MyHomePageState extends State<MyHomePage> {
         objectlistCubit: objectlistCubit,
         renderingCubit: renderingCubit,
       ),
+    );
+  }
+
+  Widget _buildRTCVideoRender() {
+    final size = 100.0;
+    return ConditionalBuilder(
+      conditionalStream: renderingCubit.connectionStream,
+      child: Positioned(
+          bottom: 100,
+          right: 100,
+          width: size,
+          height: size,
+          child: BlocProvider<ViewportRenderingCubit>.value(
+            value: renderingCubit,
+            child: ViewportDisplay(),
+          )),
     );
   }
 }

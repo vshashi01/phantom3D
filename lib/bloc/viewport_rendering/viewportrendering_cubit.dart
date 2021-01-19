@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:phantom3d/data_model/server_message_pack.dart';
 import 'package:phantom3d/data_model/viewport_commands.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
@@ -12,64 +13,75 @@ part 'viewportrendering_state.dart';
 
 class ViewportRenderingCubit extends Cubit<ViewportRenderingState> {
   ViewportRenderingCubit() : super(ViewportRenderingInitial()) {
-    _isConnectedStreamController = StreamController<bool>.broadcast();
-    _isConnected = false;
+    _isStreamRenderingController = StreamController<bool>.broadcast();
+    _isRenderStreamConnected = false;
 
-    _isConnectedStreamController?.add(_isConnected);
+    _isStreamRenderingController?.add(_isRenderStreamConnected);
   }
 
   WebSocketChannel _renderingSocket;
+  WebSocketChannel _peerConnectionSocket;
   StreamSubscription _renderStreamListener;
-  StreamController _isConnectedStreamController;
-  bool _isConnected;
+  StreamController _isStreamRenderingController;
+  bool _isRenderStreamConnected;
+  String _uuid = "";
+  RTCPeerConnection _peerConnection;
+  RTCVideoRenderer _viewportRenderer;
+
+  String get uuid {
+    return _uuid;
+  }
 
   Stream<bool> get connectionStream {
-    return _isConnectedStreamController?.stream;
+    return _isStreamRenderingController?.stream;
   }
 
   bool get isConnected {
-    return _isConnected;
+    return _isRenderStreamConnected;
   }
 
   final connectHost = "ws://localhost:8000/webg3n?h=800&w=1000";
-  bool connect({String url}) {
+  Future connect({String url}) async {
     try {
       _renderingSocket = getConnection(connectHost);
+      _renderingSocket.sink.add(GetUUID().toString());
 
       _renderStreamListener = _renderingSocket.stream.listen((message) {
         _processRenderStream(message);
+      }, onDone: () {
+        emit(ViewportReporting(
+            ServerMessagePack(action: 'Websocket Closed', value: 'For fun'),
+            _uuid));
       });
-      _updateConnectionState(true);
-      emit(ViewportRenderingConnected());
-
-      return true;
     } catch (error) {
       print(error);
-      _updateConnectionState(false);
       emit(ViewportRenderingDisconnected(null));
-      return false;
     }
   }
 
   bool disconnect({String url}) {
     try {
+      _renderingSocket?.sink?.add(CloseRendering().toString());
       _renderingSocket = null;
       _renderStreamListener.cancel();
       _renderStreamListener = null;
-      _updateConnectionState(false);
+      _uuid = "";
+      _peerConnection?.close();
+      _peerConnection = null;
+      _updateRenderStreamState(false);
       emit(ViewportRenderingDisconnected(null));
       return true;
     } catch (error) {
       print(error);
-      _updateConnectionState(false);
+      _updateRenderStreamState(false);
       emit(ViewportRenderingDisconnected(null));
       return false;
     }
   }
 
-  void _updateConnectionState(bool state) {
-    _isConnected = state;
-    _isConnectedStreamController.add(_isConnected);
+  void _updateRenderStreamState(bool state) {
+    _isRenderStreamConnected = state;
+    _isStreamRenderingController.add(_isRenderStreamConnected);
   }
 
   void setWindowSize(int width, int height) {
@@ -142,7 +154,7 @@ class ViewportRenderingCubit extends Cubit<ViewportRenderingState> {
       print(message);
 
       if (map.containsKey('action') && map.containsKey('value')) {
-        _processMap(map);
+        _processPhantomG3nMessage(map);
       }
     } on FormatException {
       _processImageBytes(message);
@@ -156,17 +168,99 @@ class ViewportRenderingCubit extends Cubit<ViewportRenderingState> {
       final imageBytes = base64Decode(base64String);
 
       if (imageBytes != null && imageBytes.isNotEmpty) {
-        emit(ViewportRenderingUpdate(imageBytes, 'Rendering update'));
+        // emit(ViewportRenderingConnected(uuid, null, imageBytes: imageBytes));
+        // if (!_isConnected) {
+        //   _updateConnectionState(true);
+        // }
       }
     } catch (error) {
       print(error);
     }
   }
 
-  void _processMap(Map<String, dynamic> map) {
+  void _processPhantomG3nMessage(Map<String, dynamic> map) async {
     final serverMessage = ServerMessagePack.fromMap(map);
     if (serverMessage != null) {
-      emit(ViewportReporting(serverMessage));
+      //all renderer messages are handled here.
+      switch (serverMessage.action) {
+        case "GetUUID":
+          _uuid = serverMessage.value;
+          emit(ViewportRenderingConnected(_uuid));
+          break;
+      }
+
+      emit(ViewportReporting(serverMessage, uuid));
     }
+  }
+
+  Future<void> connectRenderStream() async {
+    _peerConnection = await createPeerConnection({}, {});
+
+    _peerConnection.onIceCandidate = (candidate) {
+      if (candidate == null) {
+        return;
+      }
+
+      final value = JsonEncoder().convert({
+        'sdpMLineIndex': candidate.sdpMlineIndex,
+        'sdpMid': candidate.sdpMid,
+        'candidate': candidate.candidate,
+      });
+
+      _peerConnectionSocket.sink
+          .add(JsonEncoder().convert({"event": "candidate", "data": value}));
+    };
+
+    _peerConnection.onTrack = (event) async {
+      if (event.track.kind == 'video' && event.streams.isNotEmpty) {
+        _viewportRenderer = RTCVideoRenderer();
+        _viewportRenderer.initialize();
+        _viewportRenderer.srcObject = event.streams[0];
+
+        emit(ViewportRenderingStreamingStarted(_uuid, _viewportRenderer));
+        _updateRenderStreamState(true);
+      }
+    };
+
+    _peerConnection.onRemoveStream = (stream) {
+      emit(ViewportRenderingStreamingStopped(_uuid));
+      _updateRenderStreamState(false);
+    };
+
+    _peerConnectionSocket =
+        getConnection('ws://localhost:8000/rtcwebg3n?uuid=$uuid');
+    _peerConnectionSocket?.stream?.listen((raw) async {
+      Map<String, dynamic> msg = jsonDecode(raw);
+
+      if (msg != null) {
+        switch (msg['event']) {
+          case 'candidate':
+            Map<String, dynamic> parsed = jsonDecode(msg['data']);
+            _peerConnection
+                .addCandidate(RTCIceCandidate(parsed['candidate'], null, 0));
+            return;
+          case 'offer':
+            Map<String, dynamic> offer = jsonDecode(msg['data']);
+
+            // SetRemoteDescription and create answer
+            await _peerConnection.setRemoteDescription(
+                RTCSessionDescription(offer['sdp'], offer['type']));
+            RTCSessionDescription answer =
+                await _peerConnection.createAnswer({});
+            await _peerConnection.setLocalDescription(answer);
+
+            final value =
+                JsonEncoder().convert({'type': answer.type, 'sdp': answer.sdp});
+            // Send answer over WebSocket
+            _peerConnectionSocket.sink
+                .add(JsonEncoder().convert({'event': 'answer', 'data': value}));
+            return;
+        }
+      }
+    }, onDone: () {
+      print('Closed by server!');
+      emit(ViewportRenderingStreamingStopped(_uuid));
+      _updateRenderStreamState(false);
+    });
   }
 }

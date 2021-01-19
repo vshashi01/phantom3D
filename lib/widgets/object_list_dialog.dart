@@ -35,7 +35,7 @@ class _ObjectListDialogState extends State<ObjectListDialog> {
 
   @override
   void initState() {
-    widget.objectlistCubit?.update();
+    //widget.objectlistCubit?.update();
     super.initState();
   }
 
@@ -144,9 +144,6 @@ class ObjectTreeItem extends StatefulWidget {
 }
 
 class _ObjectTreeItemState extends State<ObjectTreeItem> {
-  bool _isSelected = false;
-  bool _isVisible = true;
-
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<SelectedEntityCubit, EntityCollection>(

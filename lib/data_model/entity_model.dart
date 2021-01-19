@@ -25,7 +25,7 @@ class EntityModel extends Equatable {
   List<Object> get props => [name, id];
 }
 
-class EntityCollection {
+class EntityCollection extends Equatable {
   const EntityCollection(this.models);
 
   final List<EntityModel> models;

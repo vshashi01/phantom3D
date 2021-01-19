@@ -15,12 +15,12 @@ class RenderingCommandMessage extends Equatable {
   static final rightButton = 1;
 
   RenderingCommandMessage(
-      {this.xPos,
-      this.yPos,
-      this.command,
-      this.value,
-      this.moved,
-      this.ctrlPressed});
+      {this.xPos = 0,
+      this.yPos = 0,
+      this.command = "",
+      this.value = "",
+      this.moved = false,
+      this.ctrlPressed = false});
 
   @override
   List<Object> get props => [xPos, yPos, command, value, moved, ctrlPressed];
@@ -40,6 +40,19 @@ class RenderingCommandMessage extends Equatable {
   String toString() {
     return jsonEncode(toMap());
   }
+}
+
+class CloseRendering extends RenderingCommandMessage {
+  CloseRendering() : super(command: 'Close');
+}
+
+class GetUUID extends RenderingCommandMessage {
+  GetUUID() : super(command: 'GetUUID');
+}
+
+class SimpleCommandAndValue extends RenderingCommandMessage {
+  SimpleCommandAndValue(String command, String value)
+      : super(command: command, value: value);
 }
 
 enum OrbitControls { rotate, zoom, pan }
@@ -104,24 +117,11 @@ class OrbitControlCommands extends RenderingCommandMessage {
 
 class ViewportResizeCommands extends RenderingCommandMessage {
   ViewportResizeCommands(int width, int height)
-      : super(
-            xPos: width,
-            yPos: height,
-            command: "ResizeWindow",
-            value: "",
-            ctrlPressed: false,
-            moved: false);
+      : super(xPos: width, yPos: height, command: "ResizeWindow");
 }
 
 class UnzoomAll extends RenderingCommandMessage {
-  UnzoomAll()
-      : super(
-            xPos: 0,
-            yPos: 0,
-            command: "ZoomExtent",
-            value: "",
-            ctrlPressed: false,
-            moved: false);
+  UnzoomAll() : super(command: "ZoomExtent");
 }
 
 class SelectEntityCoordinates extends RenderingCommandMessage {
@@ -130,40 +130,23 @@ class SelectEntityCoordinates extends RenderingCommandMessage {
             xPos: xPos,
             yPos: yPos,
             command: "SelectEntityCoordinates",
-            value: "",
-            ctrlPressed: multiSelect,
-            moved: false);
+            ctrlPressed: multiSelect);
 }
 
 class SelectEntityFromName extends RenderingCommandMessage {
   SelectEntityFromName(String name, {bool multiSelect = false})
       : super(
-            xPos: 0,
-            yPos: 0,
             command: "SelectEntityFromName",
             value: name,
-            ctrlPressed: multiSelect,
-            moved: false);
+            ctrlPressed: multiSelect);
 }
 
 class HideEntityFromName extends RenderingCommandMessage {
   HideEntityFromName(String name)
-      : super(
-            xPos: 0,
-            yPos: 0,
-            command: "HideEntityFromName",
-            value: name,
-            ctrlPressed: false,
-            moved: false);
+      : super(command: "HideEntityFromName", value: name);
 }
 
 class UnhideEntityFromName extends RenderingCommandMessage {
   UnhideEntityFromName(String name)
-      : super(
-            xPos: 0,
-            yPos: 0,
-            command: "UnhideEntityFromName",
-            value: name,
-            ctrlPressed: false,
-            moved: false);
+      : super(command: "UnhideEntityFromName", value: name);
 }

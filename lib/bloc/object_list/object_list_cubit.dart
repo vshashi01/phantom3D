@@ -41,10 +41,17 @@ class ObjectlistCubit extends Cubit<EntityCollection> {
   }
 
   Future update() async {
+    if (renderingCubit.uuid == "") {
+      return;
+    }
+
     final dio = Dio();
 
-    final response =
-        await dio.get<Map<String, dynamic>>("http://localhost:8000/objects");
+    final response = await dio.get<Map<String, dynamic>>(
+        "http://localhost:8000/objects",
+        queryParameters: {
+          "uuid": renderingCubit.uuid,
+        });
 
     if (response.statusCode == 200) {
       final collection = EntityCollection.fromMap(response.data);
