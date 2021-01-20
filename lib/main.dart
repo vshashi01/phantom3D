@@ -77,7 +77,6 @@ class _MyHomePageState extends State<MyHomePage> {
               title: Text("Phantom 3D"),
               actions: [
                 _buildConnectButton(),
-                _buildShowWebRTCButton(),
                 _buildDisconnectButton(),
               ],
             ),
@@ -217,22 +216,6 @@ class _MyHomePageState extends State<MyHomePage> {
         icon: Icon(Icons.cancel),
         onPressed: () {
           renderingCubit?.disconnect();
-        },
-      ),
-    );
-  }
-
-  Widget _buildShowWebRTCButton() {
-    return ConditionalBuilder(
-      conditionalStream: renderingCubit.connectionStream,
-      transformBool: false,
-      child: IconButton(
-        tooltip: "Show WEBRTC stream instead",
-        icon: Icon(Icons.collections_bookmark),
-        onPressed: () {
-          showRTCViewport = true;
-
-          setState(() {});
         },
       ),
     );

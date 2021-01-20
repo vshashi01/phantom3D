@@ -22,10 +22,10 @@ class EntityModel extends Equatable {
   }
 
   @override
-  List<Object> get props => [name, id];
+  List<Object> get props => [name, id, visible];
 }
 
-class EntityCollection extends Equatable {
+class EntityCollection {
   const EntityCollection(this.models);
 
   final List<EntityModel> models;
@@ -57,6 +57,6 @@ class EntityCollection extends Equatable {
     return EntityCollection(<EntityModel>[]);
   }
 
-  @override
+  //@override
   List<Object> get props => [models];
 }
