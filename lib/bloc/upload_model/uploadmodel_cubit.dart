@@ -8,13 +8,22 @@ part 'uploadmodel_state.dart';
 class UploadmodelCubit extends Cubit<UploadModelState> {
   UploadmodelCubit() : super(UploadModelIdle());
 
-  Future upload() async {
-    //add(Upload());
-    await _upload("");
+  String _uuid = "";
+
+  set uuid(String id) {
+    _uuid = id;
   }
 
-  Future _upload(String url) async {
+  Future upload() async {
+    await _upload();
+  }
+
+  Future _upload() async {
     try {
+      if (_uuid == "") {
+        return;
+      }
+
       final info = await getAndProcessFilePlatormSpecific();
 
       if (info.containsKey("formData")) {
@@ -22,22 +31,15 @@ class UploadmodelCubit extends Cubit<UploadModelState> {
         final path = info["path"] ?? info["filename"];
 
         emit(UploadModelInProgress(filepath: path, progress: 0.0));
-        // yield (UploadModelInProgress(
-        //     filepath: path, sentBytes: 0.0, totalBytes: 1.0));
 
         if (formData != null) {
           await _putFile(formData, path);
-
-          //yield UploadModelCompleted();
           emit(UploadModelCompleted());
         }
       }
 
-      //yield UploadModelIdle();
       emit(UploadModelIdle());
     } catch (error) {
-      // yield UploadModelFailed();
-      // yield UploadModelIdle();
       emit(UploadModelFailed());
       emit(UploadModelIdle());
     }
@@ -48,25 +50,12 @@ class UploadmodelCubit extends Cubit<UploadModelState> {
       final dio = Dio();
       dio.options.connectTimeout = 50000000;
       dio.options.receiveTimeout = 50000000;
-      await dio.put("http://localhost:8000/loadModel", data: formData,
+      await dio.put("http://localhost:8000/loadModel",
+          data: formData, queryParameters: {"uuid": _uuid},
           onSendProgress: (sent, total) async* {
-        // emit(UploadModelInProgress(
-        //     sentBytes: sent.toDouble(),
-        //     totalBytes: total.toDouble(),
-        //     filepath: filepath));
-        //yield UploadModelInProgress(
-        //    sentBytes: sent.toDouble(),
-        //    totalBytes: total.toDouble(),
-        //    filepath: filepath);
-
         _updateProgress(sent.toDouble(), total.toDouble(), filepath);
       });
-      // emit(UploadModelCompleted());
-      // emit(UploadModelIdle());
-
     } catch (error) {
-      // emit(UploadModelFailed());
-      // emit(UploadModelIdle());
       print(error);
     }
   }
@@ -76,11 +65,4 @@ class UploadmodelCubit extends Cubit<UploadModelState> {
 
     emit(UploadModelInProgress(progress: progress, filepath: filepath));
   }
-
-  // @override
-  // Stream<UploadModelState> mapEventToState(event) async* {
-  //   if (event is Upload) {
-  //     yield* _upload("");
-  //   }
-  // }
 }

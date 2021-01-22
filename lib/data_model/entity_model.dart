@@ -22,7 +22,7 @@ class EntityModel extends Equatable {
   }
 
   @override
-  List<Object> get props => [name, id];
+  List<Object> get props => [name, id, visible];
 }
 
 class EntityCollection {
@@ -57,6 +57,6 @@ class EntityCollection {
     return EntityCollection(<EntityModel>[]);
   }
 
-  @override
+  //@override
   List<Object> get props => [models];
 }

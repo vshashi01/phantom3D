@@ -1,41 +1,34 @@
 part of 'viewportrendering_cubit.dart';
 
 abstract class ViewportRenderingState extends Equatable {
-  const ViewportRenderingState(this.connected, this.imageBytes, this.message);
+  const ViewportRenderingState(this.message, this.uuid);
 
-  final bool connected;
-  final Uint8List imageBytes;
   final String message;
+  final String uuid;
 
   @override
-  List<Object> get props => [connected, imageBytes, message];
-}
-
-class ViewportRenderingInitial extends ViewportRenderingState {
-  ViewportRenderingInitial() : super(false, null, "Initial state");
+  List<Object> get props => [message, uuid];
 }
 
 class ViewportRenderingConnected extends ViewportRenderingState {
-  ViewportRenderingConnected() : super(true, null, "Established Connection");
+  ViewportRenderingConnected(String uuid)
+      : super("Established websocket Connection", uuid);
 }
 
 class ViewportRenderingDisconnected extends ViewportRenderingState {
-  ViewportRenderingDisconnected(Uint8List imageBytes)
-      : super(false, imageBytes, "Connection Lost");
+  ViewportRenderingDisconnected() : super("Websocket Connection Lost", null);
 }
 
-class ViewportRenderingUpdate extends ViewportRenderingState {
-  ViewportRenderingUpdate(Uint8List imageBytes, String message)
-      : super(true, imageBytes, message);
+class ViewportRenderingStreaming extends ViewportRenderingState {
+  ViewportRenderingStreaming(String uuid, this.videoRenderer)
+      : super("Viewport Streaming", uuid);
+
+  @override
+  List<Object> get props => [videoRenderer];
+  final RTCVideoRenderer videoRenderer;
 }
 
-class ViewportLoading extends ViewportRenderingState {
-  ViewportLoading(String message) : super(true, null, message);
-}
-
-class ViewportReporting extends ViewportRenderingState {
-  ViewportReporting(this.messagePack)
-      : super(true, null, messagePack.toString());
-
-  final ServerMessagePack messagePack;
+class ViewportRenderingSuspended extends ViewportRenderingState {
+  ViewportRenderingSuspended(String uuid)
+      : super("Suspending Render Stream", uuid);
 }
