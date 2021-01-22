@@ -1,53 +1,34 @@
 part of 'viewportrendering_cubit.dart';
 
 abstract class ViewportRenderingState extends Equatable {
-  const ViewportRenderingState(
-      this.connected, this.imageBytes, this.message, this.uuid);
+  const ViewportRenderingState(this.message, this.uuid);
 
-  final bool connected;
-  final Uint8List imageBytes;
   final String message;
   final String uuid;
 
   @override
-  List<Object> get props => [connected, imageBytes, message, uuid];
-}
-
-class ViewportRenderingInitial extends ViewportRenderingState {
-  ViewportRenderingInitial() : super(false, null, "Initial state", "");
+  List<Object> get props => [message, uuid];
 }
 
 class ViewportRenderingConnected extends ViewportRenderingState {
-  ViewportRenderingConnected(String uuid, {Uint8List imageBytes})
-      : super(true, imageBytes, "Established Connection", uuid);
+  ViewportRenderingConnected(String uuid)
+      : super("Established websocket Connection", uuid);
 }
 
 class ViewportRenderingDisconnected extends ViewportRenderingState {
-  ViewportRenderingDisconnected(Uint8List imageBytes)
-      : super(false, imageBytes, "Connection Lost", "");
+  ViewportRenderingDisconnected() : super("Websocket Connection Lost", null);
 }
 
-class ViewportRenderingStreamingStarted extends ViewportRenderingState {
-  ViewportRenderingStreamingStarted(String uuid, this.videoRenderer)
-      : super(true, null, "Viewport Streaming Started", uuid);
+class ViewportRenderingStreaming extends ViewportRenderingState {
+  ViewportRenderingStreaming(String uuid, this.videoRenderer)
+      : super("Viewport Streaming", uuid);
 
   @override
   List<Object> get props => [videoRenderer];
   final RTCVideoRenderer videoRenderer;
 }
 
-class ViewportRenderingStreamingStopped extends ViewportRenderingState {
-  ViewportRenderingStreamingStopped(String uuid)
-      : super(true, null, "Viewport Streaming Stopped", uuid);
-}
-
-class ViewportLoading extends ViewportRenderingState {
-  ViewportLoading(String message) : super(true, null, message, "");
-}
-
-class ViewportReporting extends ViewportRenderingState {
-  ViewportReporting(this.messagePack, String uuid)
-      : super(true, null, messagePack.toString(), uuid);
-
-  final ServerMessagePack messagePack;
+class ViewportRenderingSuspended extends ViewportRenderingState {
+  ViewportRenderingSuspended(String uuid)
+      : super("Suspending Render Stream", uuid);
 }

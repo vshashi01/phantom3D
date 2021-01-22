@@ -1,16 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_webrtc/flutter_webrtc.dart';
-import 'package:phantom3d/bloc/keyboard_listener/keyboard_listener_cubit.dart';
-import 'package:phantom3d/bloc/object_list/object_list_cubit.dart';
-import 'package:phantom3d/bloc/upload_model/uploadmodel_cubit.dart';
-import 'package:phantom3d/bloc/viewport_rendering/viewportrendering_cubit.dart';
-import 'package:phantom3d/widgets/conditional_builder_widget.dart';
-import 'package:phantom3d/widgets/file_upload_dialog.dart';
-import 'package:phantom3d/widgets/object_list_dialog.dart';
-import 'package:phantom3d/widgets/viewport_display_widget.dart';
-import 'package:phantom3d/widgets/viewport_listener_widget.dart';
+import 'package:phantom3d/data_model/scene_tab_container.dart';
+import 'package:phantom3d/widgets/follow_viewport_scene_widget.dart';
+import 'package:phantom3d/widgets/main_viewport_scene_widget.dart';
 
 void main() async {
   //var channel = null;
@@ -40,237 +32,218 @@ class MyHomePage extends StatefulWidget {
   _MyHomePageState createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  final keyboardListener = KeyboardListenerCubit();
-  final renderingCubit = ViewportRenderingCubit();
-  final uploadModelCubit = UploadmodelCubit();
-  bool showRTCViewport = false;
-
-  var objectlistCubit;
-  //final DragController _dragController = DragController();
-  FocusNode _focusNode;
-
-  double _previousMaxWidth;
-  double _previousMaxHeight;
+class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
+  final List<SceneTabContainer> containers = List<SceneTabContainer>();
+  SceneViewCubit _sceneViewCubit;
+  TabController _tabController;
+  int _followPortCounter = 0;
+  int _mainPortCounter = 0;
 
   @override
   void initState() {
-    objectlistCubit = ObjectlistCubit(
-        uploadmodelCubit: uploadModelCubit, renderingCubit: renderingCubit);
-    _focusNode = FocusNode(canRequestFocus: true);
+    final mainPort = MainViewportTabContainer("mainPort");
+    mainPort.init();
+    containers.add(mainPort);
+
+    final followPort = FollowViewportTabContainer("followPort");
+    followPort.init();
+    containers.add(followPort);
+
+    _sceneViewCubit = SceneViewCubit(0, containers.length);
+
+    _tabController = TabController(
+        initialIndex: _sceneViewCubit.state,
+        length: _sceneViewCubit.totalLength,
+        vsync: this);
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
-    return RawKeyboardListener(
-        onKey: (rawKeyEvent) {
-          keyboardListener.add(rawKeyEvent);
-        },
-        focusNode: _focusNode,
-        child: BlocProvider.value(
-          value: keyboardListener,
-          child: Scaffold(
+    return MaterialApp(
+      themeMode: ThemeMode.dark,
+      home: DefaultTabController(
+        length: containers.length,
+        initialIndex: _sceneViewCubit.state,
+        child: Scaffold(
             appBar: AppBar(
               backgroundColor: Colors.black,
               shadowColor: Colors.white,
               title: Text("Phantom 3D"),
-              actions: [
-                _buildConnectButton(),
-                _buildDisconnectButton(),
-              ],
-            ),
-            body: Container(
-              child: LayoutBuilder(
-                builder: (BuildContext context, BoxConstraints constraints) {
-                  if (_previousMaxHeight != constraints.maxHeight ||
-                      _previousMaxWidth != constraints.maxWidth) {
-                    // renderingCubit?.setWindowSize(constraints.maxWidth.toInt(),
-                    //     constraints.maxHeight.toInt());
-
-                    _previousMaxWidth = constraints.maxWidth;
-                    _previousMaxHeight = constraints.maxHeight;
-                  }
-
-                  return Container(
-                    width: constraints.maxWidth,
-                    height: constraints.maxHeight,
-                    color: Colors.black,
-                    child: Stack(
-                      children: [
-                        Container(
-                          child: BlocBuilder<ViewportRenderingCubit,
-                              ViewportRenderingState>(
-                            cubit: renderingCubit,
-                            buildWhen: (previousState, currentState) {
-                              if (previousState == currentState) {
-                                return false;
-                              } else if (currentState.runtimeType ==
-                                  ViewportReporting) {
-                                return false;
-                              }
-                              return true;
-                            },
-                            builder: (context, state) {
-                              if (state is ViewportRenderingStreamingStarted) {
-                                //these cubits should ideally listen to each other. Gonna be an idiot and pass it in the UI for now.
-                                uploadModelCubit.uuid = state.uuid;
-                                return Stack(children: [
-                                  buildViewport(state),
-                                ]);
-                              }
-                              uploadModelCubit.uuid = "";
-                              return Container(
-                                alignment: Alignment.center,
-                                child:
-                                    Center(child: CircularProgressIndicator()),
-                              );
-                            },
-                          ),
-                        ),
-                        _buildUnzoomAllButton(),
-                        _buildUploaderWindow(),
-                        _buildObjectListWindow(),
-                        _buildRTCVideoRender(),
-                      ],
-                    ),
-                  );
-                },
+              actions: [popUpMenu()],
+              bottom: PreferredSize(
+                preferredSize: Size.fromHeight(kToolbarHeight),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: TabBar(
+                    controller: _tabController,
+                    isScrollable: false,
+                    indicatorSize: TabBarIndicatorSize.label,
+                    indicatorColor: Colors.yellow[600],
+                    tabs: _getTabBars(),
+                    onTap: (index) {
+                      _sceneViewCubit.setCurrentSceneIndex(index);
+                    },
+                  ),
+                ),
               ),
             ),
-          ),
-        ));
-  }
+            body: BlocBuilder<SceneViewCubit, int>(
+              cubit: _sceneViewCubit,
+              builder: (context, index) {
+                return containers[index].getWidget();
+              },
+            )
 
-  Container buildViewport(ViewportRenderingStreamingStarted state) {
-    return Container(
-      child: ViewportInteractionListener(
-        child: RTCVideoView(state.videoRenderer),
-        focusNode: _focusNode,
-        //pan if P key is pressed
-        onPrimaryMouseButtonDown: (xPos, yPos, keyEvent) {
-          if (keyEvent != null &&
-              keyEvent.logicalKey == LogicalKeyboardKey.keyP) {
-            renderingCubit?.startPanAction(xPos, yPos);
-          } else {
-            renderingCubit?.selectEntityFromCoordinate(
-                xPos, yPos, (keyEvent != null && keyEvent.isControlPressed));
-          }
-        },
-        onPrimaryMouseButtonDrag: (xPos, yPos, keyEvent) {
-          if (keyEvent != null &&
-              keyEvent.logicalKey == LogicalKeyboardKey.keyP) {
-            renderingCubit?.panViewport(xPos, yPos);
-          }
-        },
-        onPrimaryMouseButtonDragComplete: (xPos, yPos, keyEvent) {
-          renderingCubit?.endAction(xPos, yPos);
-        },
-        //rotate
-        onScrollerButtonDown: (xPos, yPos, keyEvent) {
-          renderingCubit?.startRotateAction(xPos, yPos);
-        },
-        onScrollerButtonDrag: (xPos, yPos, keyEvent) {
-          renderingCubit?.rotateViewport(xPos, yPos);
-        },
-        onScrollerButtonDragComplete: (xPos, yPos, keyEvent) {
-          renderingCubit?.endAction(xPos, yPos);
-        },
-        //zoom
-        onScrollerScroll: (xOffset, yOffset, keyEvent) {
-          renderingCubit?.zoomViewport(xOffset, yOffset);
-        },
+            // TabBarView(
+            //   children: [
+            //     ...containers.map((tabContainer) {
+            //       return tabContainer.getWidget();
+            //     }).toList()
+            //   ],
+            // )
+
+            ),
       ),
     );
   }
 
-  Widget _buildUnzoomAllButton() {
-    final size = 50.0;
-    return ConditionalBuilder(
-      conditionalStream: renderingCubit.connectionStream,
-      child: Positioned(
-        bottom: 20,
-        right: 20,
-        width: size,
-        height: size,
-        child: IconButton(
-            iconSize: size,
-            tooltip: "Unzoom All",
-            icon: Icon(
-              Icons.zoom_out,
+  Widget popUpMenu() {
+    return PopupMenuButton<String>(
+      color: Colors.grey[800],
+      icon: Icon(
+        Icons.menu,
+        color: Colors.white,
+      ),
+      onSelected: (value) {
+        if (value == 'Follow Mode') {
+          _followPortCounter++;
+          final followPort = FollowViewportTabContainer(
+              "followPort $_followPortCounter",
+              closable: true);
+          followPort.init();
+          containers.add(followPort);
+        } else if (value == 'Create Mode') {
+          _mainPortCounter++;
+          final mainPort = MainViewportTabContainer(
+              "mainPort $_mainPortCounter",
+              closable: true);
+          mainPort.init();
+          containers.add(mainPort);
+        }
+
+        _sceneViewCubit.totalLength = containers.length;
+        _sceneViewCubit.goToLast();
+        _tabController = TabController(
+            initialIndex: _sceneViewCubit.state,
+            length: _sceneViewCubit.totalLength,
+            vsync: this);
+        setState(() {});
+      },
+      itemBuilder: (context) => [
+        PopupMenuItem(
+          value: 'Follow Mode',
+          child: ListTile(
+            tileColor: Colors.transparent,
+            leading: Icon(
+              Icons.panorama_fisheye_outlined,
               color: Colors.white,
             ),
-            onPressed: () {
-              renderingCubit?.unzoomAll();
-            }),
-      ),
+            title: Text(
+              'Follow Mode',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ),
+        PopupMenuItem(
+          value: 'Create Mode',
+          child: ListTile(
+            tileColor: Colors.transparent,
+            leading: Icon(
+              Icons.photo,
+              color: Colors.white,
+            ),
+            title: Text(
+              'Create Mode',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        )
+      ],
     );
   }
 
-  Widget _buildDisconnectButton() {
-    return ConditionalBuilder(
-      conditionalStream: renderingCubit.connectionStream,
-      transformBool: false,
-      child: IconButton(
-        tooltip: "Disconnect Rendering",
-        icon: Icon(Icons.cancel),
-        onPressed: () {
-          renderingCubit?.disconnect();
-        },
-      ),
-    );
+  List<Widget> _getTabBars() {
+    final containerMap = containers.asMap();
+    final widgets = List<Widget>();
+
+    containerMap.forEach((index, tabContainer) {
+      final tabBar = Container(
+          width: 200,
+          child: ListTile(
+            title: Text(tabContainer.title(),
+                style: TextStyle(color: Colors.white)),
+            trailing: tabContainer.canClose()
+                ? IconButton(
+                    icon: Icon(Icons.close, color: Colors.white),
+                    onPressed: () {
+                      tabContainer.close();
+                      containers.removeAt(index);
+
+                      _sceneViewCubit.totalLength = containers.length;
+                      _sceneViewCubit.setCurrentSceneIndex(index - 1);
+                      _tabController = TabController(
+                          initialIndex: _sceneViewCubit.state,
+                          length: _sceneViewCubit.totalLength,
+                          vsync: this);
+                      setState(() {});
+                    },
+                  )
+                : SizedBox(
+                    width: 20,
+                    height: 20,
+                  ),
+          ));
+
+      widgets.add(tabBar);
+    });
+
+    return widgets;
   }
 
-  Widget _buildConnectButton() {
-    return ConditionalBuilder(
-      conditionalStream: renderingCubit.connectionStream,
-      transformBool: true,
-      child: IconButton(
-        tooltip: "Connect Rendering",
-        icon: Icon(Icons.web_asset_rounded),
-        onPressed: () {
-          renderingCubit?.connect();
-        },
-      ),
-    );
+  // Widget _buildRTCVideoRender() {
+  //   final size = 100.0;
+  //   return ConditionalBuilder(
+  //     conditionalStream: renderingCubit.connectionStream,
+  //     child: Positioned(
+  //         bottom: 100,
+  //         right: 100,
+  //         width: size,
+  //         height: size,
+  //         child: BlocProvider<ViewportRenderingCubit>.value(
+  //           value: renderingCubit,
+  //           child: ViewportDisplay(),
+  //         )),
+  //   );
+  // }
+}
+
+class SceneViewCubit extends Cubit<int> {
+  SceneViewCubit(int initialIndex, int initialLength) : super(initialIndex) {
+    totalLength = initialLength;
   }
 
-  Widget _buildUploaderWindow() {
-    return ConditionalBuilder(
-      conditionalStream: renderingCubit.connectionStream,
-      child: FileUploadDialog(
-        width: 200,
-        height: 180,
-        uploadmodelCubit: uploadModelCubit,
-      ),
-    );
+  int totalLength;
+
+  void closingScene(int index) {
+    emit(0);
   }
 
-  Widget _buildObjectListWindow() {
-    return ConditionalBuilder(
-      conditionalStream: renderingCubit.connectionStream,
-      child: ObjectListDialog(
-        width: 300,
-        maxHeight: 500,
-        objectlistCubit: objectlistCubit,
-        renderingCubit: renderingCubit,
-      ),
-    );
+  void setCurrentSceneIndex(int index) {
+    emit(index);
   }
 
-  Widget _buildRTCVideoRender() {
-    final size = 100.0;
-    return ConditionalBuilder(
-      conditionalStream: renderingCubit.connectionStream,
-      child: Positioned(
-          bottom: 100,
-          right: 100,
-          width: size,
-          height: size,
-          child: BlocProvider<ViewportRenderingCubit>.value(
-            value: renderingCubit,
-            child: ViewportDisplay(),
-          )),
-    );
+  void goToLast() {
+    emit(totalLength - 1);
   }
 }

@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
@@ -12,17 +11,19 @@ import 'package:phantom3d/multi_platform_libs/websocket/websocket_channel.dart';
 part 'viewportrendering_state.dart';
 
 class ViewportRenderingCubit extends Cubit<ViewportRenderingState> {
-  ViewportRenderingCubit() : super(ViewportRenderingInitial()) {
+  ViewportRenderingCubit() : super(ViewportRenderingDisconnected()) {
     _isStreamRenderingController = StreamController<bool>.broadcast();
     _isRenderStreamConnected = false;
 
     _isStreamRenderingController?.add(_isRenderStreamConnected);
+    _reportStreamController = StreamController<ServerMessagePack>.broadcast();
   }
 
   WebSocketChannel _renderingSocket;
   WebSocketChannel _peerConnectionSocket;
   StreamSubscription _renderStreamListener;
-  StreamController _isStreamRenderingController;
+  StreamController<bool> _isStreamRenderingController;
+  StreamController<ServerMessagePack> _reportStreamController;
   bool _isRenderStreamConnected;
   String _uuid = "";
   RTCPeerConnection _peerConnection;
@@ -36,12 +37,16 @@ class ViewportRenderingCubit extends Cubit<ViewportRenderingState> {
     return _isStreamRenderingController?.stream;
   }
 
+  Stream<ServerMessagePack> get messageStream {
+    return _reportStreamController?.stream;
+  }
+
   bool get isConnected {
     return _isRenderStreamConnected;
   }
 
   final connectHost = "ws://localhost:8000/webg3n?h=800&w=1000";
-  Future connect({String url}) async {
+  Future connect() async {
     try {
       _renderingSocket = getConnection(connectHost);
       _renderingSocket.sink.add(GetUUID().toString());
@@ -49,18 +54,17 @@ class ViewportRenderingCubit extends Cubit<ViewportRenderingState> {
       _renderStreamListener = _renderingSocket.stream.listen((message) {
         _processMessageStream(message);
       }, onDone: () {
-        emit(ViewportReporting(
-            ServerMessagePack(action: 'Websocket Closed', value: 'For fun'),
-            _uuid));
-        emit(ViewportRenderingDisconnected(null));
+        _reportStreamController?.add(
+            ServerMessagePack(action: 'Websocket Closed', value: 'For fun'));
+        emit(ViewportRenderingDisconnected());
       });
     } catch (error) {
       print(error);
-      emit(ViewportRenderingDisconnected(null));
+      emit(ViewportRenderingDisconnected());
     }
   }
 
-  bool disconnect({String url}) {
+  bool disconnect() {
     try {
       _renderingSocket?.sink?.add(CloseRendering().toString());
       _renderingSocket = null;
@@ -70,12 +74,12 @@ class ViewportRenderingCubit extends Cubit<ViewportRenderingState> {
       _peerConnection?.close();
       _peerConnection = null;
       _updateRenderStreamState(false);
-      emit(ViewportRenderingDisconnected(null));
+      emit(ViewportRenderingDisconnected());
       return true;
     } catch (error) {
       print(error);
       _updateRenderStreamState(false);
-      emit(ViewportRenderingDisconnected(null));
+      emit(ViewportRenderingDisconnected());
       return false;
     }
   }
@@ -174,7 +178,7 @@ class ViewportRenderingCubit extends Cubit<ViewportRenderingState> {
           break;
       }
 
-      emit(ViewportReporting(serverMessage, uuid));
+      _reportStreamController?.add(serverMessage);
     }
   }
 
@@ -202,13 +206,13 @@ class ViewportRenderingCubit extends Cubit<ViewportRenderingState> {
         _viewportRenderer.initialize();
         _viewportRenderer.srcObject = event.streams[0];
 
-        emit(ViewportRenderingStreamingStarted(_uuid, _viewportRenderer));
+        emit(ViewportRenderingStreaming(_uuid, _viewportRenderer));
         _updateRenderStreamState(true);
       }
     };
 
     _peerConnection.onRemoveStream = (stream) {
-      emit(ViewportRenderingStreamingStopped(_uuid));
+      emit(ViewportRenderingConnected(_uuid));
       _updateRenderStreamState(false);
     };
 
@@ -244,8 +248,20 @@ class ViewportRenderingCubit extends Cubit<ViewportRenderingState> {
       }
     }, onDone: () {
       print('Closed by server!');
-      emit(ViewportRenderingStreamingStopped(_uuid));
+      emit(ViewportRenderingConnected(_uuid));
       _updateRenderStreamState(false);
     });
+  }
+
+  Future<void> suspendRenderStream() async {
+    final currentState = state;
+
+    if (currentState is ViewportRenderingStreaming) {
+      _peerConnection?.close();
+      _peerConnection = null;
+      _peerConnectionSocket = null;
+
+      emit(ViewportRenderingSuspended(currentState.uuid));
+    }
   }
 }

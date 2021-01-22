@@ -7,10 +7,8 @@ import 'package:phantom3d/data_model/server_message_pack.dart';
 class SelectedEntityCubit extends Cubit<EntityCollection> {
   SelectedEntityCubit(this.renderingCubit) : super(EntityCollection.empty()) {
     if (renderingCubit != null) {
-      _renderingCubitListener = renderingCubit.listen((state) {
-        if (state is ViewportReporting) {
-          _readReport(state.messagePack);
-        }
+      _renderingCubitListener = renderingCubit.messageStream.listen((message) {
+        _readReport(message);
       });
     }
 

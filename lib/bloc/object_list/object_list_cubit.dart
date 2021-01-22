@@ -18,10 +18,8 @@ class ObjectlistCubit extends Cubit<EntityCollection> {
     }
 
     if (renderingCubit != null) {
-      _visibilitySubcription = renderingCubit.listen((state) {
-        if (state is ViewportReporting) {
-          _processRenderingState(state.messagePack);
-        }
+      _visibilitySubcription = renderingCubit.messageStream.listen((message) {
+        _processRenderingState(message);
       });
     }
   }

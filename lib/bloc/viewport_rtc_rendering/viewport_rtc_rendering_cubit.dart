@@ -1,22 +1,48 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:bloc/bloc.dart';
+import 'package:dio/dio.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:phantom3d/data_model/client_list_model.dart';
 import 'package:phantom3d/multi_platform_libs/websocket/websocket_channel.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 part 'viewport_rtc_rendering_state.dart';
 
-class ViewportRTCRenderingCubit extends Cubit<ViewportRTCRenderingState> {
-  ViewportRTCRenderingCubit(this.uuid) : super(ViewportRTCRenderingIdle());
+class FollowRTCCubit extends Cubit<FollowRTCState> {
+  FollowRTCCubit() : super(FollowRTCIdle()) {
+    _connectionStreamController = StreamController<bool>.broadcast();
+    _connectionStreamController.add(false);
+  }
 
   WebSocketChannel _socket;
   RTCPeerConnection _peerConnection;
   RTCVideoRenderer _viewportRenderer;
-  String uuid;
+  StreamController<bool> _connectionStreamController;
 
-  Future<void> connect() async {
+  Stream<bool> get connectionStream {
+    return _connectionStreamController.stream;
+  }
+
+  Future<void> getAllClients() async {
+    if (state is FollowRTCConnected) {
+      return;
+    }
+
+    final dio = Dio();
+
+    final response =
+        await dio.get<Map<String, dynamic>>("http://localhost:8000/allclients");
+
+    if (response.statusCode == 200) {
+      final clientList = ClientList.fromMap(response.data);
+      emit(FollowRTCClientList(clientList));
+    }
+  }
+
+  Future<void> connect(String uuid) async {
     _peerConnection = await createPeerConnection({}, {});
 
     _peerConnection.onIceCandidate = (candidate) {
@@ -40,14 +66,13 @@ class ViewportRTCRenderingCubit extends Cubit<ViewportRTCRenderingState> {
         _viewportRenderer.initialize();
         _viewportRenderer.srcObject = event.streams[0];
 
-        emit(ViewportRTCRenderingConnected(_viewportRenderer));
+        emit(FollowRTCConnected(_viewportRenderer, uuid));
+        _connectionStreamController.add(true);
       }
     };
 
-    _peerConnection.onRemoveStream = (stream) {
-      _viewportRenderer = null;
-
-      emit(ViewportRTCRenderingIdle());
+    _peerConnection.onRemoveStream = (stream) async {
+      await disconnect();
     };
 
     _socket = getConnection('ws://localhost:8000/rtcwebg3n?uuid=$uuid');
@@ -80,5 +105,28 @@ class ViewportRTCRenderingCubit extends Cubit<ViewportRTCRenderingState> {
     }, onDone: () {
       print('Closed by server!');
     });
+  }
+
+  Future<void> disconnect() async {
+    _peerConnection?.close();
+    _peerConnection = null;
+    _viewportRenderer = null;
+    _socket = null;
+
+    _connectionStreamController.add(false);
+    emit(FollowRTCIdle());
+    await getAllClients();
+  }
+
+  Future<void> suspend() async {
+    final currentState = state;
+    if (currentState is FollowRTCConnected) {
+      _peerConnection?.close();
+      _peerConnection = null;
+      _viewportRenderer = null;
+      _socket = null;
+      _connectionStreamController.add(false);
+      emit(FollowRTCSuspended(currentState.uuid));
+    }
   }
 }
