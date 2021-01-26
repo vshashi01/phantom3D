@@ -207,6 +207,7 @@ class _MainViewportSceneState extends State<MainViewportScene> {
 
   Container buildViewport(ViewportRenderingStreaming state) {
     return Container(
+      color: Colors.white,
       child: RawKeyboardListener(
         focusNode: _focusNode,
         onKey: (rawKeyEvent) {

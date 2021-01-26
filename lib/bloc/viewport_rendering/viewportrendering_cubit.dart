@@ -182,8 +182,44 @@ class ViewportRenderingCubit extends Cubit<ViewportRenderingState> {
     }
   }
 
+  void _onSignalingState(RTCSignalingState state) {
+    print("On Signaling state" + state.toString());
+  }
+
+  void _onIceGatheringState(RTCIceGatheringState state) {
+    print("On IceGatheringState" + state.toString());
+  }
+
+  void _onIceConnectionState(RTCIceConnectionState state) {
+    print("IceConnection State: " + state.toString());
+  }
+
+  void _onPeerConnectionState(RTCPeerConnectionState state) {
+    print("Peer Connection State" + state.toString());
+  }
+
   Future<void> connectRenderStream() async {
-    _peerConnection = await createPeerConnection({}, {});
+    final Map<String, dynamic> _config = {
+      'mandatory': {},
+      'optional': [
+        {'DtlsSrtpKeyAgreement': true},
+      ]
+    };
+
+    _peerConnection = await createPeerConnection({
+      'iceServers': [
+        {'url': 'stun:stun.l.google.com:19302'},
+        {'url': 'stun:stun1.l.google.com:19302'},
+        {'url': 'stun:stun2.l.google.com:19302'},
+        {'url': 'stun:stun3.l.google.com:19302'},
+        {'url': 'stun:stun4.l.google.com:19302'},
+      ]
+    }, {});
+
+    _peerConnection.onSignalingState = _onSignalingState;
+    _peerConnection.onIceGatheringState = _onIceGatheringState;
+    _peerConnection.onIceConnectionState = _onIceConnectionState;
+    _peerConnection.onConnectionState = _onPeerConnectionState;
 
     _peerConnection.onIceCandidate = (candidate) {
       if (candidate == null) {
@@ -257,9 +293,11 @@ class ViewportRenderingCubit extends Cubit<ViewportRenderingState> {
     final currentState = state;
 
     if (currentState is ViewportRenderingStreaming) {
-      _peerConnection?.close();
+      await _viewportRenderer.dispose();
+      await _peerConnection?.close();
       _peerConnection = null;
       _peerConnectionSocket = null;
+      _viewportRenderer = null;
 
       emit(ViewportRenderingSuspended(currentState.uuid));
     }
