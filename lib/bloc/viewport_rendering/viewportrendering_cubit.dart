@@ -45,10 +45,17 @@ class ViewportRenderingCubit extends Cubit<ViewportRenderingState> {
     return _isRenderStreamConnected;
   }
 
-  final connectHost = "ws://localhost:8000/webg3n?h=800&w=1000";
-  Future connect() async {
+  final localHost = "ws://localhost:8000/webg3n?h=800&w=1000";
+  final connectHost = "ws://35.247.177.137:8000/webg3n?h=800&w=1000";
+  Future connect(bool useLocalHost) async {
     try {
-      _renderingSocket = getConnection(connectHost);
+      var host = connectHost;
+
+      if (useLocalHost) {
+        host = localHost;
+      }
+
+      _renderingSocket = getConnection(host);
       _renderingSocket.sink.add(GetUUID().toString());
 
       _renderStreamListener = _renderingSocket.stream.listen((message) {
@@ -252,8 +259,10 @@ class ViewportRenderingCubit extends Cubit<ViewportRenderingState> {
       _updateRenderStreamState(false);
     };
 
+    // _peerConnectionSocket =
+    //     getConnection('ws://localhost:8000/rtcwebg3n?uuid=$uuid');
     _peerConnectionSocket =
-        getConnection('ws://localhost:8000/rtcwebg3n?uuid=$uuid');
+        getConnection('ws://35.247.177.137:8000/rtcwebg3n?uuid=$uuid');
     _peerConnectionSocket?.stream?.listen((raw) async {
       Map<String, dynamic> msg = jsonDecode(raw);
 

@@ -6,6 +6,6 @@ import (
 )
 
 var options = []flutter.Option{
-	flutter.WindowInitialDimensions(800, 1280),
+	flutter.WindowInitialDimensions(1920, 1080),
 	flutter.AddPlugin(&file_picker.FilePickerPlugin{}),
 }

@@ -26,7 +26,7 @@ class FollowRTCCubit extends Cubit<FollowRTCState> {
     return _connectionStreamController.stream;
   }
 
-  Future<void> getAllClients() async {
+  Future<void> getAllClients(bool useLocalHost) async {
     if (state is FollowRTCConnected) {
       return;
     }
@@ -75,7 +75,8 @@ class FollowRTCCubit extends Cubit<FollowRTCState> {
       await disconnect();
     };
 
-    _socket = getConnection('ws://localhost:8000/rtcwebg3n?uuid=$uuid');
+    //_socket = getConnection('ws://localhost:8000/rtcwebg3n?uuid=$uuid');
+    _socket = getConnection('ws://35.247.177.137:8000/rtcwebg3n?uuid=$uuid');
     _socket.stream.listen((raw) async {
       Map<String, dynamic> msg = jsonDecode(raw);
 
@@ -115,7 +116,7 @@ class FollowRTCCubit extends Cubit<FollowRTCState> {
 
     _connectionStreamController.add(false);
     emit(FollowRTCIdle());
-    await getAllClients();
+    //await getAllClients();
   }
 
   Future<void> suspend() async {

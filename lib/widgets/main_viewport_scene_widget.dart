@@ -75,6 +75,7 @@ class _MainViewportSceneState extends State<MainViewportScene> {
   double _previousMaxWidth;
   double _previousMaxHeight;
   FocusNode _focusNode;
+  bool _useLocalHost = true;
 
   @override
   void initState() {
@@ -126,6 +127,7 @@ class _MainViewportSceneState extends State<MainViewportScene> {
               backgroundColor: Colors.black,
               toolbarOpacity: 1.0,
               actions: [
+                _buildLocalhostCheckbox(),
                 _buildDisconnectButton(),
                 Container(width: 20, height: 20, color: Colors.black)
               ],
@@ -183,7 +185,7 @@ class _MainViewportSceneState extends State<MainViewportScene> {
         ),
         iconSize: 50,
         onPressed: () {
-          widget.renderingCubit?.connect();
+          widget.renderingCubit?.connect(_useLocalHost);
         },
       ),
     );
@@ -301,33 +303,29 @@ class _MainViewportSceneState extends State<MainViewportScene> {
     });
   }
 
-  // Widget _buildDisconnectButton() {
-  //   return ConditionalBuilder(
-  //     conditionalStream: widget.renderingCubit.connectionStream,
-  //     transformBool: false,
-  //     child: IconButton(
-  //       tooltip: "Disconnect Rendering",
-  //       icon: Icon(Icons.cancel),
-  //       onPressed: () {
-  //         widget.renderingCubit?.disconnect();
-  //       },
-  //     ),
-  //   );
-  // }
+  Widget _buildLocalhostCheckbox() {
+    return BlocBuilder<ViewportRenderingCubit, ViewportRenderingState>(
+        builder: (context, state) {
+      if (state is ViewportRenderingDisconnected) {
+        return Container(
+          width: 200,
+          height: 50,
+          child: CheckboxListTile(
+            tileColor: Colors.white54,
+            checkColor: Colors.white,
+            value: _useLocalHost,
+            onChanged: (value) {
+              _useLocalHost = value;
+              setState(() {});
+            },
+            title: Text('Use Localhost', style: TextStyle(color: Colors.white)),
+          ),
+        );
+      }
 
-  // Widget _buildConnectButton() {
-  //   return ConditionalBuilder(
-  //     conditionalStream: widget.renderingCubit.connectionStream,
-  //     transformBool: true,
-  //     child: IconButton(
-  //       tooltip: "Connect Rendering",
-  //       icon: Icon(Icons.web_asset_rounded),
-  //       onPressed: () {
-  //         widget.renderingCubit?.connect();
-  //       },
-  //     ),
-  //   );
-  // }
+      return Container();
+    });
+  }
 
   Widget _buildUploaderWindow() {
     return BlocBuilder<ViewportRenderingCubit, ViewportRenderingState>(

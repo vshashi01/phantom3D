@@ -50,6 +50,8 @@ class FollowViewportScene extends StatefulWidget {
 }
 
 class _FollowViewportSceneState extends State<FollowViewportScene> {
+  var _useLocalHost = true;
+
   @override
   void initState() {
     super.initState();
@@ -69,7 +71,11 @@ class _FollowViewportSceneState extends State<FollowViewportScene> {
         appBar: AppBar(
           backgroundColor: Colors.black,
           toolbarOpacity: 1.0,
-          actions: [_buildRefreshClientListButton(), _buildDisconnectButton()],
+          actions: [
+            _buildLocalhostCheckbox(),
+            _buildRefreshClientListButton(),
+            _buildDisconnectButton()
+          ],
         ),
         body: Container(
           color: Colors.black,
@@ -99,7 +105,7 @@ class _FollowViewportSceneState extends State<FollowViewportScene> {
                     iconSize: 50,
                     tooltip: "Get clients",
                     onPressed: () async {
-                      await widget.rtcCubit.getAllClients();
+                      await widget.rtcCubit.getAllClients(_useLocalHost);
                     },
                   ),
                 ),
@@ -144,20 +150,6 @@ class _FollowViewportSceneState extends State<FollowViewportScene> {
     );
   }
 
-  // Widget _buildDisconnectButton() {
-  //   return ConditionalBuilder(
-  //     conditionalStream: widget.rtcCubit.connectionStream,
-  //     transformBool: false,
-  //     child: IconButton(
-  //       tooltip: "Disconnect Follow Mode",
-  //       icon: Icon(Icons.cancel),
-  //       onPressed: () {
-  //         widget.rtcCubit?.disconnect();
-  //       },
-  //     ),
-  //   );
-  // }
-
   Widget _buildDisconnectButton() {
     return BlocBuilder<FollowRTCCubit, FollowRTCState>(
         builder: (context, state) {
@@ -183,8 +175,32 @@ class _FollowViewportSceneState extends State<FollowViewportScene> {
           icon: Icon(Icons.refresh, color: Colors.white),
           tooltip: "Refresh Client list",
           onPressed: () {
-            widget.rtcCubit.getAllClients();
+            widget.rtcCubit.getAllClients(_useLocalHost);
           },
+        );
+      }
+
+      return Container();
+    });
+  }
+
+  Widget _buildLocalhostCheckbox() {
+    return BlocBuilder<FollowRTCCubit, FollowRTCState>(
+        builder: (context, state) {
+      if (state is FollowRTCIdle) {
+        return Container(
+          width: 200,
+          height: 40,
+          child: CheckboxListTile(
+            tileColor: Colors.white54,
+            checkColor: Colors.white,
+            value: _useLocalHost,
+            onChanged: (value) {
+              _useLocalHost = value;
+              setState(() {});
+            },
+            title: Text('Use Localhost', style: TextStyle(color: Colors.white)),
+          ),
         );
       }
 
