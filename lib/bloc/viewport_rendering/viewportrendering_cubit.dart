@@ -260,9 +260,8 @@ class ViewportRenderingCubit extends Cubit<ViewportRenderingState> {
       };
     }
 
-    _peerConnection.onRemoveStream = (stream) {
-      emit(ViewportRenderingConnected(_uuid));
-      _updateRenderStreamState(false);
+    _peerConnection.onRemoveStream = (stream) async {
+      disconnect();
     };
 
     _peerConnectionSocket =
