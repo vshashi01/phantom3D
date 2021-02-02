@@ -218,7 +218,10 @@ class _MainViewportSceneState extends State<MainViewportScene> {
         child: BlocProvider<KeyboardListenerCubit>.value(
           value: _keyboardListenerCubit,
           child: ViewportInteractionListener(
-            child: RTCVideoView(state.videoRenderer),
+            child: RTCVideoView(
+              state.videoRenderer,
+              objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+            ),
             focusNode: _focusNode,
             //pan if P key is pressed
             onPrimaryMouseButtonDown: (xPos, yPos, keyEvent) {

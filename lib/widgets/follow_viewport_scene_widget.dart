@@ -84,7 +84,9 @@ class _FollowViewportSceneState extends State<FollowViewportScene> {
             builder: (context, state) {
               if (state is FollowRTCConnected) {
                 return Container(
-                  child: RTCVideoView(state.videoRenderer),
+                  child: RTCVideoView(state.videoRenderer,
+                      objectFit:
+                          RTCVideoViewObjectFit.RTCVideoViewObjectFitCover),
                 );
               } else if (state is FollowRTCSuspended) {
                 widget.rtcCubit.connect(state.uuid);

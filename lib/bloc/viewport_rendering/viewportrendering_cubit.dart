@@ -51,8 +51,9 @@ class ViewportRenderingCubit extends Cubit<ViewportRenderingState> {
     return _useLocalHost;
   }
 
-  //final localHost = "ws://localhost:8000/webg3n?h=800&w=1000";
-  //final connectHost = "ws://35.247.177.137:8000/webg3n?h=800&w=1000";
+  String get sdpSemantics =>
+      WebRTC.platformIsWindows ? 'plan-b' : 'unified-plan';
+
   Future connect(bool useLocalHost) async {
     try {
       _useLocalHost = useLocalHost;
@@ -193,19 +194,19 @@ class ViewportRenderingCubit extends Cubit<ViewportRenderingState> {
   }
 
   void _onSignalingState(RTCSignalingState state) {
-    print("On Signaling state" + state.toString());
+    print("On SignalingState: " + state.toString());
   }
 
   void _onIceGatheringState(RTCIceGatheringState state) {
-    print("On IceGatheringState" + state.toString());
+    print("On IceGatheringState: " + state.toString());
   }
 
   void _onIceConnectionState(RTCIceConnectionState state) {
-    print("IceConnection State: " + state.toString());
+    print("On IceConnectionState: " + state.toString());
   }
 
   void _onPeerConnectionState(RTCPeerConnectionState state) {
-    print("Peer Connection State" + state.toString());
+    print("On PeerConnectionState: " + state.toString());
   }
 
   Future<void> connectRenderStream() async {
@@ -223,7 +224,8 @@ class ViewportRenderingCubit extends Cubit<ViewportRenderingState> {
         {'url': 'stun:stun2.l.google.com:19302'},
         {'url': 'stun:stun3.l.google.com:19302'},
         {'url': 'stun:stun4.l.google.com:19302'},
-      ]
+      ],
+      'sdpSemantics': sdpSemantics
     }, {});
 
     _peerConnection.onSignalingState = _onSignalingState;
@@ -246,26 +248,23 @@ class ViewportRenderingCubit extends Cubit<ViewportRenderingState> {
           .add(JsonEncoder().convert({"event": "candidate", "data": value}));
     };
 
-    _peerConnection.onTrack = (event) async {
-      if (event.track.kind == 'video' && event.streams.isNotEmpty) {
-        _viewportRenderer = RTCVideoRenderer();
-        _viewportRenderer.initialize();
-        _viewportRenderer.srcObject = event.streams[0];
-
-        emit(ViewportRenderingStreaming(_uuid, _viewportRenderer));
-        _updateRenderStreamState(true);
-      }
-    };
+    if (WebRTC.platformIsWindows) {
+      _peerConnection.onAddStream = (MediaStream stream) async {
+        await _startRenderStream(stream);
+      };
+    } else {
+      _peerConnection.onTrack = (event) async {
+        if (event.track.kind == 'video' && event.streams.isNotEmpty) {
+          await _startRenderStream(event.streams[0]);
+        }
+      };
+    }
 
     _peerConnection.onRemoveStream = (stream) {
       emit(ViewportRenderingConnected(_uuid));
       _updateRenderStreamState(false);
     };
 
-    // _peerConnectionSocket =
-    //     getConnection('ws://localhost:8000/rtcwebg3n?uuid=$uuid');
-    // _peerConnectionSocket =
-    //     getConnection('ws://35.247.177.137:8000/rtcwebg3n?uuid=$uuid');
     _peerConnectionSocket =
         getConnection(getUrltoFollowRenderInstance(_useLocalHost, uuid));
     _peerConnectionSocket?.stream?.listen((raw) async {
@@ -298,9 +297,18 @@ class ViewportRenderingCubit extends Cubit<ViewportRenderingState> {
       }
     }, onDone: () {
       print('Closed by server!');
-      emit(ViewportRenderingConnected(_uuid));
+      emit(ViewportRenderingSuspended(_uuid));
       _updateRenderStreamState(false);
     });
+  }
+
+  Future<void> _startRenderStream(MediaStream stream) async {
+    _viewportRenderer = RTCVideoRenderer();
+    await _viewportRenderer.initialize();
+    _viewportRenderer.srcObject = stream;
+
+    emit(ViewportRenderingStreaming(_uuid, _viewportRenderer));
+    _updateRenderStreamState(true);
   }
 
   Future<void> suspendRenderStream() async {

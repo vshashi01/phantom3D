@@ -66,16 +66,17 @@ class FollowRTCCubit extends Cubit<FollowRTCState> {
       }));
     };
 
-    _peerConnection.onTrack = (event) async {
-      if (event.track.kind == 'video' && event.streams.isNotEmpty) {
-        _viewportRenderer = RTCVideoRenderer();
-        _viewportRenderer.initialize();
-        _viewportRenderer.srcObject = event.streams[0];
-
-        emit(FollowRTCConnected(_viewportRenderer, uuid));
-        _connectionStreamController.add(true);
-      }
-    };
+    if (WebRTC.platformIsWindows) {
+      _peerConnection.onAddStream = (stream) async {
+        await _startRenderStream(stream, uuid);
+      };
+    } else {
+      _peerConnection.onTrack = (event) async {
+        if (event.track.kind == 'video' && event.streams.isNotEmpty) {
+          await _startRenderStream(event.streams[0], uuid);
+        }
+      };
+    }
 
     _peerConnection.onRemoveStream = (stream) async {
       await disconnect();
@@ -124,6 +125,15 @@ class FollowRTCCubit extends Cubit<FollowRTCState> {
     _connectionStreamController.add(false);
     emit(FollowRTCIdle());
     //await getAllClients();
+  }
+
+  Future<void> _startRenderStream(MediaStream stream, String uuid) async {
+    _viewportRenderer = RTCVideoRenderer();
+    await _viewportRenderer.initialize();
+    _viewportRenderer.srcObject = stream;
+
+    emit(FollowRTCConnected(_viewportRenderer, uuid));
+    _connectionStreamController.add(true);
   }
 
   Future<void> suspend() async {
