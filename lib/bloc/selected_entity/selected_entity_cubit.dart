@@ -12,7 +12,7 @@ class SelectedEntityCubit extends Cubit<EntityCollection> {
       });
     }
 
-    _selectedEntities = List<EntityModel>();
+    _selectedEntities = List<EntityModel>.empty(growable: true);
   }
 
   final ViewportRenderingCubit renderingCubit;

@@ -6,11 +6,16 @@ import 'package:phantom3d/widgets/draggable_dialog.dart';
 
 class FileUploadDialog extends StatefulWidget {
   const FileUploadDialog(
-      {Key key, this.uploadmodelCubit, this.height, this.width})
+      {Key key,
+      this.uploadmodelCubit,
+      this.height,
+      this.width,
+      this.useLocalHost = false})
       : super(key: key);
   final double height;
   final double width;
   final UploadmodelCubit uploadmodelCubit;
+  final bool useLocalHost;
 
   @override
   _FileUploadDialogState createState() => _FileUploadDialogState();
@@ -69,7 +74,7 @@ class _FileUploadDialogState extends State<FileUploadDialog> {
               ]),
               onPressed: buttonActive
                   ? () async {
-                      await widget.uploadmodelCubit.upload();
+                      await widget.uploadmodelCubit.upload(widget.useLocalHost);
                     }
                   : null,
             );

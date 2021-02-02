@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:phantom3d/config/server_config.dart';
 import 'package:phantom3d/data_model/server_message_pack.dart';
 import 'package:phantom3d/data_model/viewport_commands.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
@@ -28,6 +29,7 @@ class ViewportRenderingCubit extends Cubit<ViewportRenderingState> {
   String _uuid = "";
   RTCPeerConnection _peerConnection;
   RTCVideoRenderer _viewportRenderer;
+  bool _useLocalHost = true;
 
   String get uuid {
     return _uuid;
@@ -45,17 +47,17 @@ class ViewportRenderingCubit extends Cubit<ViewportRenderingState> {
     return _isRenderStreamConnected;
   }
 
-  final localHost = "ws://localhost:8000/webg3n?h=800&w=1000";
-  final connectHost = "ws://35.247.177.137:8000/webg3n?h=800&w=1000";
+  bool get isUseLocalhost {
+    return _useLocalHost;
+  }
+
+  //final localHost = "ws://localhost:8000/webg3n?h=800&w=1000";
+  //final connectHost = "ws://35.247.177.137:8000/webg3n?h=800&w=1000";
   Future connect(bool useLocalHost) async {
     try {
-      var host = connectHost;
-
-      if (useLocalHost) {
-        host = localHost;
-      }
-
-      _renderingSocket = getConnection(host);
+      _useLocalHost = useLocalHost;
+      _renderingSocket =
+          getConnection(getUrltoStartRenderInstance(_useLocalHost));
       _renderingSocket.sink.add(GetUUID().toString());
 
       _renderStreamListener = _renderingSocket.stream.listen((message) {
@@ -81,6 +83,7 @@ class ViewportRenderingCubit extends Cubit<ViewportRenderingState> {
       _peerConnection?.close();
       _peerConnection = null;
       _updateRenderStreamState(false);
+      _useLocalHost = true;
       emit(ViewportRenderingDisconnected());
       return true;
     } catch (error) {
@@ -261,8 +264,10 @@ class ViewportRenderingCubit extends Cubit<ViewportRenderingState> {
 
     // _peerConnectionSocket =
     //     getConnection('ws://localhost:8000/rtcwebg3n?uuid=$uuid');
+    // _peerConnectionSocket =
+    //     getConnection('ws://35.247.177.137:8000/rtcwebg3n?uuid=$uuid');
     _peerConnectionSocket =
-        getConnection('ws://35.247.177.137:8000/rtcwebg3n?uuid=$uuid');
+        getConnection(getUrltoFollowRenderInstance(_useLocalHost, uuid));
     _peerConnectionSocket?.stream?.listen((raw) async {
       Map<String, dynamic> msg = jsonDecode(raw);
 

@@ -3,6 +3,7 @@ import 'package:bloc/bloc.dart';
 import 'package:dio/dio.dart';
 import 'package:phantom3d/bloc/upload_model/uploadmodel_cubit.dart';
 import 'package:phantom3d/bloc/viewport_rendering/viewportrendering_cubit.dart';
+import 'package:phantom3d/config/server_config.dart';
 import 'package:phantom3d/data_model/entity_model.dart';
 import 'package:phantom3d/data_model/server_message_pack.dart';
 
@@ -29,7 +30,8 @@ class ObjectlistCubit extends Cubit<EntityCollection> {
   StreamSubscription _uploadModelSubscription;
   StreamSubscription _visibilitySubcription;
 
-  List<EntityModel> _lastUpdatedObjectList = List<EntityModel>();
+  List<EntityModel> _lastUpdatedObjectList =
+      List<EntityModel>.empty(growable: true);
 
   @override
   Future close() {
@@ -46,7 +48,8 @@ class ObjectlistCubit extends Cubit<EntityCollection> {
     final dio = Dio();
 
     final response = await dio.get<Map<String, dynamic>>(
-        "http://localhost:8000/objects",
+        //"http://localhost:8000/objects",
+        getUrltoGetObjectList(renderingCubit.isUseLocalhost),
         queryParameters: {
           "uuid": renderingCubit.uuid,
         });

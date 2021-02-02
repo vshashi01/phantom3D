@@ -335,6 +335,7 @@ class _MainViewportSceneState extends State<MainViewportScene> {
           width: 200,
           height: 180,
           uploadmodelCubit: widget.uploadmodelCubit,
+          useLocalHost: _useLocalHost,
         );
       }
 

@@ -5,6 +5,7 @@ import 'package:bloc/bloc.dart';
 import 'package:dio/dio.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:phantom3d/config/server_config.dart';
 import 'package:phantom3d/data_model/client_list_model.dart';
 import 'package:phantom3d/multi_platform_libs/websocket/websocket_channel.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
@@ -21,6 +22,7 @@ class FollowRTCCubit extends Cubit<FollowRTCState> {
   RTCPeerConnection _peerConnection;
   RTCVideoRenderer _viewportRenderer;
   StreamController<bool> _connectionStreamController;
+  bool _useLocalHost = true;
 
   Stream<bool> get connectionStream {
     return _connectionStreamController.stream;
@@ -31,10 +33,14 @@ class FollowRTCCubit extends Cubit<FollowRTCState> {
       return;
     }
 
+    _useLocalHost = useLocalHost;
+
     final dio = Dio();
 
-    final response =
-        await dio.get<Map<String, dynamic>>("http://localhost:8000/allclients");
+    // final response =
+    //     await dio.get<Map<String, dynamic>>("http://localhost:8000/allclients");
+    final response = await dio
+        .get<Map<String, dynamic>>(getUrltoGetClientList(_useLocalHost));
 
     if (response.statusCode == 200) {
       final clientList = ClientList.fromMap(response.data);
@@ -76,7 +82,8 @@ class FollowRTCCubit extends Cubit<FollowRTCState> {
     };
 
     //_socket = getConnection('ws://localhost:8000/rtcwebg3n?uuid=$uuid');
-    _socket = getConnection('ws://35.247.177.137:8000/rtcwebg3n?uuid=$uuid');
+    //_socket = getConnection('ws://35.247.177.137:8000/rtcwebg3n?uuid=$uuid');
+    _socket = getConnection(getUrltoFollowRenderInstance(_useLocalHost, uuid));
     _socket.stream.listen((raw) async {
       Map<String, dynamic> msg = jsonDecode(raw);
 
