@@ -78,11 +78,12 @@ class ViewportRenderingCubit extends Cubit<ViewportRenderingState> {
     try {
       _renderingSocket?.sink?.add(CloseRendering().toString());
       _renderingSocket = null;
-      _renderStreamListener.cancel();
+      _renderStreamListener?.cancel();
       _renderStreamListener = null;
       _uuid = "";
       _peerConnection?.close();
       _peerConnection = null;
+      _peerConnectionSocket = null;
       _updateRenderStreamState(false);
       _useLocalHost = true;
       emit(ViewportRenderingDisconnected());
@@ -207,6 +208,12 @@ class ViewportRenderingCubit extends Cubit<ViewportRenderingState> {
 
   void _onPeerConnectionState(RTCPeerConnectionState state) {
     print("On PeerConnectionState: " + state.toString());
+
+    if (state == RTCPeerConnectionState.RTCPeerConnectionStateDisconnected ||
+        state == RTCPeerConnectionState.RTCPeerConnectionStateClosed ||
+        state == RTCPeerConnectionState.RTCPeerConnectionStateFailed) {
+      disconnect();
+    }
   }
 
   Future<void> connectRenderStream() async {
@@ -261,7 +268,7 @@ class ViewportRenderingCubit extends Cubit<ViewportRenderingState> {
     }
 
     _peerConnection.onRemoveStream = (stream) async {
-      disconnect();
+      //disconnect();
     };
 
     _peerConnectionSocket =
@@ -296,8 +303,11 @@ class ViewportRenderingCubit extends Cubit<ViewportRenderingState> {
       }
     }, onDone: () {
       print('Closed by server!');
-      emit(ViewportRenderingSuspended(_uuid));
-      _updateRenderStreamState(false);
+      if (_peerConnection != null &&
+          _peerConnection.connectionState ==
+              RTCPeerConnectionState.RTCPeerConnectionStateConnected) {
+        disconnect();
+      }
     });
   }
 

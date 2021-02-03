@@ -1,4 +1,4 @@
-const String _google_server_ip = "35.247.177.137";
+const String _google_server_ip = "34.126.93.133";
 const String _localhost = "localhost";
 const int _port = 8000;
 

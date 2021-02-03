@@ -175,7 +175,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
 
   List<Widget> _getTabBars() {
     final containerMap = containers.asMap();
-    final widgets = List<Widget>();
+    final widgets = List<Widget>.empty(growable: true);
 
     containerMap.forEach((index, tabContainer) {
       final tabBar = Container(
