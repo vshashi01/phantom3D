@@ -186,7 +186,7 @@ class ViewportRenderingCubit extends Cubit<ViewportRenderingState> {
         case "GetUUID":
           _uuid = serverMessage.value;
           emit(ViewportRenderingConnected(_uuid));
-          connectRenderStream();
+          await connectRenderStream();
           break;
       }
 
@@ -212,7 +212,7 @@ class ViewportRenderingCubit extends Cubit<ViewportRenderingState> {
     if (state == RTCPeerConnectionState.RTCPeerConnectionStateDisconnected ||
         state == RTCPeerConnectionState.RTCPeerConnectionStateClosed ||
         state == RTCPeerConnectionState.RTCPeerConnectionStateFailed) {
-      disconnect();
+      //disconnect();
     }
   }
 
@@ -224,16 +224,36 @@ class ViewportRenderingCubit extends Cubit<ViewportRenderingState> {
       ]
     };
 
-    _peerConnection = await createPeerConnection({
+    var _iceServers = {
       'iceServers': [
-        {'url': 'stun:stun.l.google.com:19302'},
-        {'url': 'stun:stun1.l.google.com:19302'},
-        {'url': 'stun:stun2.l.google.com:19302'},
-        {'url': 'stun:stun3.l.google.com:19302'},
-        {'url': 'stun:stun4.l.google.com:19302'},
-      ],
-      'sdpSemantics': sdpSemantics
-    }, {});
+        {
+          'urls': 'turn:18.220.247.163:3478',
+          'username': 'user',
+          'credential': 'root'
+        },
+      ]
+    };
+
+    // _peerConnection = await createPeerConnection({
+    //   'iceServers': [
+    //     {
+    //       'url': 'turn:18.220.247.163:3478',
+    //       'username': 'user',
+    //       'password': 'root'
+    //     },
+    //     {'url': 'stun:stun.l.google.com:19302'},
+    //     {'url': 'stun:stun1.l.google.com:19302'},
+    //     {'url': 'stun:stun2.l.google.com:19302'},
+    //     {'url': 'stun:stun3.l.google.com:19302'},
+    //     {'url': 'stun:stun4.l.google.com:19302'},
+    //   ],
+    //   'sdpSemantics': sdpSemantics
+    // }, {});
+
+    _peerConnection = await createPeerConnection({
+      ..._iceServers,
+      ...{'sdpSemantics': sdpSemantics},
+    }, _config);
 
     _peerConnection.onSignalingState = _onSignalingState;
     _peerConnection.onIceGatheringState = _onIceGatheringState;
@@ -306,7 +326,7 @@ class ViewportRenderingCubit extends Cubit<ViewportRenderingState> {
       if (_peerConnection != null &&
           _peerConnection.connectionState ==
               RTCPeerConnectionState.RTCPeerConnectionStateConnected) {
-        disconnect();
+        //disconnect();
       }
     });
   }
